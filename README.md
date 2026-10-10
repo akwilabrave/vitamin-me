@@ -12,7 +12,8 @@ Personal fitness app (installable web app) for iPhone.
 ## Files
 | File | Purpose |
 |---|---|
-| `index.html` | The whole app: UI, Strava OAuth + sync, maps (Leaflet + OpenStreetMap), HR chart, splits |
+| `index.html` | Page shell and styles (themes) |
+| `app.js` | Strava OAuth + sync, views, maps (Leaflet + OpenStreetMap), HR chart, splits, settings, backup |
 | `scoring.js` | Pure points engine (effort blocks, distance, consistency, streaks) |
 | `shop.js` | Reward shop |
 | `sw.js` | Offline app-shell cache. Bump `VERSION` on every deploy. |

@@ -464,20 +464,20 @@ function recordValue(r){
   return `${r.value} week${r.value === 1 ? '' : 's'}`;
 }
 function capsuleSvg(v){
-  const done = !!v.unlocked, pct = done ? 100 : Math.max(0, Math.min(100, v.value / v.target * 100));
+  const done = v.count > 0, pct = done ? 100 : v.next ? Math.max(0, Math.min(100, v.next.value / v.next.target * 100)) : 0;
   return `<svg class="cap ${done ? 'on' : ''}" viewBox="0 0 120 52" role="img" aria-label="${esc(v.name)}${done ? ', collected' : `, ${Math.round(pct)}% progress`}">
     <defs><clipPath id="cp-${v.id}"><rect x="2" y="2" width="116" height="48" rx="24"/></clipPath></defs>
     ${done ? `<rect x="2" y="2" width="58" height="48" fill="var(--accent)" clip-path="url(#cp-${v.id})"/><rect x="60" y="2" width="58" height="48" fill="var(--accent2)" clip-path="url(#cp-${v.id})"/>
               <rect x="10" y="9" width="40" height="7" rx="3.5" fill="#fff" opacity=".35"/>`
            : `<rect x="2" y="2" width="${(116 * pct / 100).toFixed(1)}" height="48" fill="var(--accent)" opacity=".22" clip-path="url(#cp-${v.id})"/>`}
     <rect x="2" y="2" width="116" height="48" rx="24" fill="none" stroke="${done ? 'none' : 'var(--line)'}" stroke-width="2"/>
-    <text x="60" y="34" text-anchor="middle" class="capsym">${esc(v.sym)}</text></svg>`;
+    <text x="60" y="34" text-anchor="middle" class="capsym">${esc(v.sym)}</text></svg>${v.count > 1 ? `<span class="badge">×${v.count}</span>` : ''}`;
 }
 function viewProgress(){
   const R = getLedger().rec;
   if (!R || !Object.keys(store.get(K.acts, {})).length)
     return `<h1 class="brand">Progress</h1><div class="empty">Sync your workouts first. Records and vitamins are worked out from your history.</div>`;
-  const got = R.vitamins.filter(v => v.unlocked).length;
+  const types = R.vitamins.filter(v => v.count).length, total = R.vitamins.reduce((s, v) => s + v.count, 0);
   let html = `<h1 class="brand">Progress</h1><h2>Records</h2>`;
   html += R.records.length ? `<div class="recs">` + R.records.map(r => {
     const tag = r.actId ? 'a' : 'div', href = r.actId ? ` href="#/a/${r.actId}"` : '';
@@ -488,22 +488,29 @@ function viewProgress(){
   }).join('') + `</div>` : `<p class="hint">Records appear once you've synced runs.</p>`;
   html += `<p class="hint">Beating a 1 km, 5 km, 10 km or half-marathon time earns +${getLedger().params.prPts}, a new longest run +${getLedger().params.longestPts}. Times are Strava's best efforts within your runs.</p>`;
 
-  html += `<h2>Vitamins <span class="count">${got} of ${R.vitamins.length} collected</span></h2><div class="vits">` +
-    R.vitamins.map(v => `<div class="vit ${v.unlocked ? 'on' : ''}">${capsuleSvg(v)}
-      <div class="t">${esc(v.name)}</div><div class="m">${esc(v.desc)}</div>
-      <div class="m s">${v.unlocked ? `Collected ${shortDate(v.unlocked.date)}` : `${nf(v.value, v.unit === 'km' ? 1 : 0)} of ${nf(v.target, v.target % 1 ? 1 : 0)} ${v.unit}`}</div></div>`).join('') + `</div>
-    <p class="hint">Each vitamin collected earns +${getLedger().params.vitaminPts} points.</p>`;
+  const nextTxt = v => v.next ? `${nf(v.next.value, v.unit === 'km' ? 1 : 0)} of ${nf(v.next.target, v.next.target % 1 ? 1 : 0)} ${v.unit}` : '';
+  html += `<h2>Vitamins <span class="count">${total} collected, ${types} of ${R.vitamins.length} kinds</span></h2><div class="vits">` +
+    R.vitamins.map(v => {
+      const status = v.count ? (v.count === 1 ? `Collected ${shortDate(v.last.date)}` : `Collected ${v.count} times, last ${shortDate(v.last.date)}`) : '';
+      const next = v.once && v.count ? 'Milestone reached' : v.next ? (v.count ? `Next: ${nextTxt(v)}` : nextTxt(v)) : (v.count ? '' : 'Not collected yet');
+      return `<div class="vit ${v.count ? 'on' : ''}"><div class="capwrap">${capsuleSvg(v)}</div>
+        <div class="t">${esc(v.name)}${v.once ? ' <span class="chip">Once</span>' : ''}</div><div class="m">${esc(v.desc)}</div>
+        ${status ? `<div class="m s">${status}</div>` : ''}${next ? `<div class="m">${next}</div>` : ''}</div>`;
+    }).join('') + `</div>
+    <p class="hint">Every collection earns +${getLedger().params.vitaminPts} points, except Vitamin A, because records already earn their own bonus.</p>`;
   return html;
 }
 /* Toast newly collected vitamins once. On first run, history unlocks are summarised. */
 function announceVitamins(){
   const R = getLedger().rec; if (!R) return;
-  const meta = store.get(K.meta, {}), seen = new Set(meta.seenVit || []);
-  const fresh = R.vitamins.filter(v => v.unlocked && !seen.has(v.id));
+  const meta = store.get(K.meta, {});
+  const seen = Array.isArray(meta.seenVit) ? Object.fromEntries(meta.seenVit.map(id => [id, 1])) : (meta.seenVit || {});
+  const fresh = R.vitamins.filter(v => v.count > (seen[v.id] || 0));
   if (!fresh.length) return;
-  store.set(K.meta, { ...meta, seenVit: R.vitamins.filter(v => v.unlocked).map(v => v.id) });
-  setTimeout(() => toast(fresh.length === 1 ? `New vitamin collected: ${fresh[0].name}. ${fresh[0].desc}.`
-                                            : `You've collected ${fresh.length} vitamins. See them under Progress.`), 3200);
+  const n = fresh.reduce((s, v) => s + v.count - (seen[v.id] || 0), 0);
+  store.set(K.meta, { ...meta, seenVit: Object.fromEntries(R.vitamins.map(v => [v.id, v.count])) });
+  setTimeout(() => toast(n === 1 ? `Vitamin collected: ${fresh[0].name}${fresh[0].count > 1 ? ` (×${fresh[0].count})` : ''}. ${fresh[0].desc}.`
+                                 : `You've collected ${n} vitamins. See them under Progress.`), 3200);
 }
 
 /* ---------------- settings ---------------- */

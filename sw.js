@@ -1,6 +1,6 @@
 // App-shell cache. Strava API, map tiles and CDN requests are not intercepted.
 // Bump VERSION whenever files change so the phone picks them up.
-const VERSION = 'vm-strava-6';
+const VERSION = 'vm-strava-7';
 const SHELL = ['./', 'index.html', 'app.js', 'scoring.js', 'records.js', 'shop.js', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

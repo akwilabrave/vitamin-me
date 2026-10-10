@@ -4,383 +4,526 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitamin Me</title>
-<meta name="theme-color" content="#0d1117">
+<meta name="theme-color" content="#10151c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Vitamin Me">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   :root{
-    --bg:#0d1117; --card:#161b22; --line:#262d36; --text:#e6edf3; --muted:#8b949e;
-    --accent:#ff9f1c; --accent2:#2ec4b6; --vig:#ef476f; --bad:#ef476f;
+    --bg:#10151c; --panel:#18202a; --line:#243040; --text:#eef2f6; --muted:#8c99a8;
+    --orange:#ff8a1f; --teal:#20b2a6; --red:#ef476f;
+    --round: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--text);
-    font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
-  body{padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 90px)}
-  h1{font-size:28px;margin:4px 0 2px;letter-spacing:-.5px}
-  h1 span{color:var(--accent)}
-  .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
-  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 0 8px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-  .k{color:var(--muted);font-size:12px}
-  .v{font-size:24px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}
-  .v small{font-size:13px;color:var(--muted);font-weight:500;margin-left:3px}
-  .bar{height:6px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden;display:flex}
-  .bar>i{display:block;height:100%;background:var(--accent2)}
-  .bar>i.vig{background:var(--vig)}
-  .chart{display:flex;align-items:flex-end;gap:4px;height:110px;padding-top:6px}
-  .chart div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
-  .chart b{width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
-  .chart span{font-size:10px;color:var(--muted);margin-top:4px}
-  .kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .kv:last-child{border-bottom:0}
-  .kv span:last-child{font-variant-numeric:tabular-nums}
-  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
-  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
-  .dock{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);
-    background:rgba(13,17,23,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;gap:8px}
-  button{font:inherit;border-radius:12px;padding:12px;font-weight:600;color:var(--text);background:var(--card);
-    border:1px solid var(--line);flex:1}
-  button.primary{background:var(--accent);color:#111;border-color:var(--accent)}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  .row button{flex:1 1 45%}
-  .toast{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 10px);background:var(--card);
-    border:1px solid var(--line);border-radius:12px;padding:12px;opacity:0;transform:translateY(-10px);transition:.25s;pointer-events:none;z-index:9}
+    font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+  body{padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 96px);max-width:640px;margin:0 auto}
+  a{color:inherit}
+  button,input{font:inherit}
+  :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+
+  .brand{font-family:var(--round);font-size:30px;font-weight:700;letter-spacing:-.6px;margin:0}
+  .brand i{font-style:normal;color:var(--orange)}
+  .status{color:var(--muted);font-size:13px;margin:2px 0 18px}
+  h2{font-family:var(--round);font-size:19px;font-weight:650;margin:28px 0 10px}
+  .num{font-family:var(--round);font-variant-numeric:tabular-nums}
+
+  /* period summary: two big figures, the capsule is the progress bar */
+  .period{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .period .big{font-family:var(--round);font-size:34px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+  .period .big small{font-size:15px;color:var(--muted);font-weight:600;margin-left:3px}
+  .period .lbl{color:var(--muted);font-size:13px}
+  .capsule{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:10px;display:flex}
+  .capsule i{display:block;height:100%;background:linear-gradient(90deg,var(--orange) 50%,var(--teal) 50%);background-size:200% 100%}
+
+  /* activity list: route thumbnail is the visual anchor */
+  .act{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);text-decoration:none}
+  .act:last-child{border-bottom:0}
+  .thumb{width:64px;height:64px;border-radius:14px;background:var(--panel);display:grid;place-items:center;color:var(--muted);font-size:12px;text-align:center}
+  .thumb svg{width:52px;height:52px}
+  .act .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .act .m{color:var(--muted);font-size:13px}
+  .act .m span{margin-right:12px;white-space:nowrap}
+  .leaflet-control-attribution.leaflet-control{background:rgba(16,21,28,.75);color:var(--muted);font-size:10px}
+  .leaflet-control-attribution a{color:var(--muted)}
+  .act .r{text-align:right}
+  .act .r b{font-family:var(--round);font-size:20px;font-variant-numeric:tabular-nums}
+  .act .r div{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+
+  /* detail */
+  .back{background:none;border:0;color:var(--orange);padding:6px 0;font-weight:600}
+  .title{font-family:var(--round);font-size:26px;font-weight:700;margin:6px 0 2px;line-height:1.15}
+  #map{height:260px;border-radius:18px;margin:14px 0;background:var(--panel);overflow:hidden}
+  .leaflet-container{background:var(--panel)}
+  .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
+  .nomap{height:auto;padding:26px;text-align:center;color:var(--muted)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px;margin:16px 0}
+  .stats .v{font-family:var(--round);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .stats .k{color:var(--muted);font-size:12px}
+  .stats .hero{grid-column:1/-1}
+  .stats .hero .v{font-size:44px;line-height:1}
+  .chart{width:100%;height:auto;display:block}
+  .chart text{fill:var(--muted);font-size:11px;font-family:-apple-system,system-ui,sans-serif}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{color:var(--muted);font-weight:500;font-size:12px;text-align:right;padding:6px 4px}
+  td{text-align:right;padding:8px 4px;border-top:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  .splitbar{display:inline-block;height:6px;border-radius:3px;background:var(--teal);vertical-align:middle;margin-right:6px}
+
+  /* settings */
+  .field{margin:12px 0}
+  .field label{display:block;color:var(--muted);font-size:13px;margin-bottom:4px}
+  .field input{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  .btn{display:block;width:100%;border:1px solid var(--line);border-radius:14px;padding:13px;background:var(--panel);color:var(--text);font-weight:600;margin-top:10px}
+  .btn.go{background:var(--orange);border-color:var(--orange);color:#1b1206}
+  .btn.danger{color:var(--red)}
+  .hint{color:var(--muted);font-size:13px}
+  .hint code{background:var(--panel);padding:1px 5px;border-radius:5px;color:var(--text)}
+  .empty{color:var(--muted);text-align:center;padding:36px 12px}
+  .empty .btn{max-width:260px;margin:14px auto 0}
+
+  .dock{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;
+    padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);background:rgba(16,21,28,.9);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+  .dock button{flex:1;max-width:200px;border:0;border-radius:14px;padding:12px;background:var(--panel);color:var(--text);font-weight:600}
+  .dock button.go{background:var(--orange);color:#1b1206}
+  .dock button[disabled]{opacity:.55}
+  .toast{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 10px);max-width:608px;margin:0 auto;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+    opacity:0;transform:translateY(-8px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:1000}
   .toast.on{opacity:1;transform:none}
-  .toast.err{border-color:var(--bad)}
-  textarea{width:100%;height:120px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;font:12px ui-monospace,monospace}
-  details summary{color:var(--muted);cursor:pointer;margin:10px 0 6px}
-  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;margin-bottom:8px}
-  .seg button{padding:6px;border:0;background:transparent;font-size:13px;color:var(--muted)}
-  .seg button.on{background:var(--line);color:var(--text)}
-  .set{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
-  .set input{width:80px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;text-align:right}
-  .note{color:var(--muted);font-size:12px;margin-top:6px}
+  .toast.err{border-color:var(--red)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 </head>
 <body>
-<h1>Vitamin <span>Me</span></h1>
-<div class="sub" id="lastSync">No data yet</div>
+<main id="view"></main>
 
-<h2>Today</h2>
-<div class="grid">
-  <div class="card" style="grid-column:1/-1">
-    <div class="k">Intensity minutes</div>
-    <div class="v" id="imin">–</div>
-    <div class="bar" id="iminBar"><i id="iminMod"></i><i class="vig" id="iminVig"></i></div>
-    <div class="legend"><span><i style="background:var(--accent2)"></i><span id="modTxt">Moderate</span></span>
-      <span><i style="background:var(--vig)"></i><span id="vigTxt">Vigorous</span></span></div>
-  </div>
-  <div class="card"><div class="k">Steps</div><div class="v" id="steps">–</div></div>
-  <div class="card"><div class="k">Active energy</div><div class="v" id="energy">–</div></div>
-</div>
+<nav class="dock">
+  <button id="navHome">Workouts</button>
+  <button id="navSync" class="go">Sync</button>
+  <button id="navSettings">Settings</button>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<h2>This week</h2>
-<div class="card">
-  <div class="k">Intensity minutes · Mon–Sun · goal <span id="wkGoal"></span></div>
-  <div class="v" id="wk">–</div>
-  <div class="bar"><i id="wkBar"></i></div>
-</div>
-
-<h2>Last 7 days</h2>
-<div class="seg" id="metricSeg">
-  <button data-m="imin" class="on">Intensity</button>
-  <button data-m="steps">Steps</button>
-  <button data-m="energy">Energy</button>
-</div>
-<div class="card"><div class="chart" id="chart"></div></div>
-
-<h2>Heart-rate detail (today)</h2>
-<div class="card" id="hrDetail"></div>
-
-<h2>Settings</h2>
-<div class="card">
-  <div class="set"><span>Age</span><input id="sAge" type="number" inputmode="numeric"></div>
-  <div class="set"><span>Moderate from (% HRR)</span><input id="sMod" type="number" inputmode="numeric"></div>
-  <div class="set"><span>Vigorous from (% HRR)</span><input id="sVig" type="number" inputmode="numeric"></div>
-  <div class="set"><span>Max gap credited (min)</span><input id="sGap" type="number" inputmode="decimal"></div>
-  <div class="set"><span>Weekly goal (min)</span><input id="sGoal" type="number" inputmode="numeric"></div>
-  <div class="note">Zones use heart-rate reserve: threshold = RHR + p·(HRmax − RHR), with HRmax = 208 − 0.7·age.</div>
-</div>
-
-<h2>Data</h2>
-<div class="row">
-  <button id="btnDemo">Load demo data</button>
-  <button id="btnExport">Export backup</button>
-  <button id="btnImport">Import backup</button>
-  <button id="btnClear">Clear all</button>
-</div>
-<details>
-  <summary>Manual paste (debug)</summary>
-  <textarea id="raw" placeholder="Paste Shortcut output here"></textarea>
-  <button id="btnParse" style="width:100%;margin-top:8px">Parse pasted text</button>
-</details>
-<input type="file" id="file" accept="application/json" hidden>
-
-<div class="dock">
-  <button id="btnRun">Run sync shortcut</button>
-  <button class="primary" id="btnPaste">Paste synced data</button>
-</div>
-<div class="toast" id="toast"></div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-/* ================= Config ================= */
-const SHORTCUT_NAME = 'Vitamin Me Sync';
-const STORE_KEY = 'vitaminme.v1';
-const HR_RETENTION_DAYS = 60;
-const DEFAULT_SETTINGS = { age: 22, modPct: 40, vigPct: 60, gapMin: 5, weeklyGoal: 150 };
+"use strict";
+/* ================================================================
+   Vitamin Me — personal Strava client (static PWA, no backend)
+   Data flow: Huawei watch → Huawei Health → Strava → Strava API → this page
+   Storage:   localStorage = config, tokens, activity summaries
+              IndexedDB    = per-activity detail + streams cache
+   ================================================================ */
 
-/* ================= Storage =================
-   state = {
-     days: { 'YYYY-MM-DD': { steps, energy, rhr } },
-     hr:   { 'YYYY-MM-DDTHH:mm:ss': bpm },      raw heart-rate samples (keyed by timestamp → dedupes re-syncs)
-     settings, lastSync
-   } */
-function blank(){ return { days:{}, hr:{}, settings:{...DEFAULT_SETTINGS}, lastSync:null }; }
-function load(){
+const K = { cfg:'vm.cfg', tok:'vm.tok', acts:'vm.acts', meta:'vm.meta' };
+const API = 'https://www.strava.com/api/v3';
+const FIRST_SYNC_DAYS = 365;
+const DETAILS_PER_SYNC = 20;          // fetch calories/splits for this many newest activities per sync
+try { localStorage.removeItem('vitaminme.v1'); } catch(e){}   // old Shortcut-based data
+
+/* ---------------- storage ---------------- */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){ toast('Storage is full: ' + e.message, true); } },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+const idb = (() => {
+  let p;
+  const db = () => p ??= new Promise((res, rej) => {
+    const r = indexedDB.open('vitamin-me', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+  const run = (mode, fn) => db().then(d => new Promise((res, rej) => {
+    const t = d.transaction('kv', mode), req = fn(t.objectStore('kv'));
+    t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error);
+  }));
+  return {
+    get: k => run('readonly', s => s.get(k)).catch(() => undefined),
+    set: (k, v) => run('readwrite', s => s.put(v, k)).catch(() => {}),
+    clear: () => run('readwrite', s => s.clear()).catch(() => {})
+  };
+})();
+
+/* ---------------- Strava auth ---------------- */
+const redirectUri = () => location.origin + location.pathname;
+
+async function tokenRequest(params){
+  const cfg = store.get(K.cfg, {});
+  if (!cfg.clientId || !cfg.clientSecret) throw new Error('Add your Strava Client ID and Secret in Settings first.');
+  let r;
   try {
-    const s = JSON.parse(localStorage.getItem(STORE_KEY));
-    if (!s) return blank();
-    return { ...blank(), ...s, hr: s.hr || {}, settings: { ...DEFAULT_SETTINGS, ...(s.settings||{}) } };
-  } catch(e){ return blank(); }
+    r = await fetch('https://www.strava.com/oauth/token', {
+      method: 'POST',
+      body: new URLSearchParams({ client_id: cfg.clientId, client_secret: cfg.clientSecret, ...params })
+    });
+  } catch(e){ throw new Error('Could not reach Strava. Check your connection.'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('Strava rejected the request: ' + (j.message || r.status) + '. Check Client ID/Secret.');
+  const prev = store.get(K.tok, {});
+  const tok = { access: j.access_token, refresh: j.refresh_token, expires: j.expires_at,
+                athlete: j.athlete ? { id: j.athlete.id, name: `${j.athlete.firstname} ${j.athlete.lastname}`.trim() } : prev.athlete };
+  store.set(K.tok, tok);
+  return tok;
 }
-function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){ toast('Could not save: '+e.message, true); } }
-let state = load();
-
-/* ================= Parsing =================
-   Line protocol from the Shortcut:
-     D|<metric>|<yyyy-MM-dd>|<value>        metric ∈ steps, energy, rhr
-     H|<yyyy-MM-dd'T'HH:mm[:ss]>|<bpm>     one line per heart-rate sample */
-const METRICS = new Set(['steps','energy','rhr']);
-function num(x){
-  if (x == null) return null;
-  let s = String(x).replace(/[^\d.,-]/g,'');
-  if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.')
-      ? s.replace(/\./g,'').replace(',', '.') : s.replace(/,/g,'');
-  else if (/^\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g,'');
-  else s = s.replace(',', '.');
-  const n = parseFloat(s);
-  return Number.isFinite(n) ? n : null;
+async function accessToken(){
+  let t = store.get(K.tok, null);
+  if (!t) throw new Error('Connect Strava in Settings first.');
+  if (t.expires * 1000 < Date.now() + 120000) t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: t.refresh });
+  return t.access;
 }
-function isoDay(x){ const m = String(x||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[1]}-${m[2]}-${m[3]}` : null; }
-/* Accepts the custom ISO format plus Shortcuts' locale defaults, e.g.
-   "2026-10-10T08:15:30", "2026/10/10, 08:15", "10/10/2026 at 8:15 PM", "10 Oct 2026 at 08:15" (day-first assumed) */
-const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
-function isoTime(x){
-  const s = String(x||'').replace(/ | /g,' ');
-  let y, mo, d, m;
-  if ((m = s.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))) [y,mo,d] = [m[1],m[2],m[3]];
-  else if ((m = s.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/))) [d,mo,y] = [m[1],m[2],m[3]];
-  else if ((m = s.match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?,?\s+(\d{4})/)) && MONTHS[m[2].toLowerCase()]) [d,mo,y] = [m[1],MONTHS[m[2].toLowerCase()],m[3]];
-  else if ((m = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/)) && MONTHS[m[1].toLowerCase()]) [mo,d,y] = [MONTHS[m[1].toLowerCase()],m[2],m[3]];
-  else return null;
-  const rest = s.slice(s.indexOf(m[0]) + m[0].length);
-  const t = rest.match(/(\d{1,2})[:h](\d{2})(?::(\d{2}))?\s*([AaPp])?/);
-  if (!t) return null;
-  let hh = +t[1];
-  if (t[4]){ const pm = /p/i.test(t[4]); if (hh === 12) hh = pm ? 12 : 0; else if (pm) hh += 12; }
-  const p2 = n => String(n).padStart(2,'0');
-  if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31 || hh > 23) return null;
-  return `${y}-${p2(mo)}-${p2(d)}T${p2(hh)}:${t[2]}:${t[3]||'00'}`;
+async function api(path){
+  let r;
+  try { r = await fetch(API + path, { headers: { Authorization: 'Bearer ' + await accessToken() } }); }
+  catch(e){ if (e.message.includes('Strava') || e.message.includes('Settings')) throw e; throw new Error('Could not reach Strava. Check your connection.'); }
+  if (r.status === 401) throw new Error('Strava access was revoked or expired. Reconnect in Settings.');
+  if (r.status === 429) throw new Error('Strava rate limit reached. Try again in 15 minutes.');
+  if (!r.ok) throw new Error('Strava returned error ' + r.status + '.');
+  return r.json();
 }
-function parse(text){
-  const out = { days:{}, hr:{}, ok:0, bad:0, hrCount:0, badLines:[] };
-  const skip = l => { out.bad++; if (out.badLines.length < 5) out.badLines.push(l); };
-  for (const raw of String(text).split(/\r?\n/)){
-    const line = raw.trim(); if (!line) continue;
-    const p = line.split('|').map(s => s.trim());
-    if (p[0] === 'D' && METRICS.has(p[1])){
-      const d = isoDay(p[2]), v = num(p[3]);
-      if (!d || v == null){ skip(line); continue; }
-      out.days[d] = out.days[d] || {};
-      out.days[d][p[1]] = p[1] === 'rhr' ? v : Math.max(out.days[d][p[1]] || 0, v);
-      out.ok++;
-    } else if (p[0] === 'H'){
-      const t = isoTime(p[1]), v = num(p[2]);
-      if (!t || v == null || v < 25 || v > 240){ skip(line); continue; }   // reject sensor junk
-      out.hr[t] = v; out.ok++; out.hrCount++;
-    } else skip(line);
+function connectStrava(){
+  const cfg = store.get(K.cfg, {});
+  if (!cfg.clientId || !cfg.clientSecret){ toast('Save your Client ID and Secret first.', true); return; }
+  location.href = 'https://www.strava.com/oauth/authorize?' + new URLSearchParams({
+    client_id: cfg.clientId, response_type: 'code', redirect_uri: redirectUri(),
+    approval_prompt: 'auto', scope: 'read,activity:read_all'
+  });
+}
+async function exchangeCode(code){
+  await tokenRequest({ code: code.trim(), grant_type: 'authorization_code' });
+  toast('Connected to Strava. Syncing…');
+  location.hash = '#/';
+  await sync();
+}
+/* OAuth return: ?code=…&scope=… */
+let pendingCode = null;
+(function handleReturn(){
+  const q = new URLSearchParams(location.search);
+  if (!q.has('code') && !q.has('error')) return;
+  history.replaceState(null, '', location.pathname + location.hash);
+  if (q.get('error')){ setTimeout(() => toast('Strava access was not granted.', true), 50); return; }
+  const scope = q.get('scope') || '';
+  if (!/activity:read/.test(scope)){
+    setTimeout(() => toast('Tick "View data about your activities" on the Strava screen, then connect again.', true), 50);
+    return;
   }
-  return out;
-}
-function ingest(text){
-  const p = parse(text);
-  if (p.bad){   // surface the first skipped lines so the Shortcut format can be fixed
-    $('raw').value = 'First skipped lines:\n' + p.badLines.join('\n');
-    document.querySelector('details').open = true;
-  }
-  if (!p.ok){ toast('No valid records found. Check the Shortcut output.', true); return; }
-  for (const [d, vals] of Object.entries(p.days)) state.days[d] = { ...(state.days[d]||{}), ...vals };
-  Object.assign(state.hr, p.hr);
-  pruneHr();
-  state.lastSync = new Date().toISOString();
-  save(); render();
-  toast(`Synced ${p.ok} records (${p.hrCount} HR)` + (p.bad ? `, ${p.bad} skipped` : ''));
-}
-function pruneHr(){
-  const cutoff = dayKey(-HR_RETENTION_DAYS);
-  for (const t of Object.keys(state.hr)) if (t.slice(0,10) < cutoff) delete state.hr[t];
-}
+  // If this page has the credentials, finish here. Otherwise we were opened in Safari
+  // (separate storage from the home-screen app): show the code to paste into the app.
+  if (store.get(K.cfg, {}).clientSecret) setTimeout(() => exchangeCode(q.get('code')).catch(e => toast(e.message, true)), 0);
+  else pendingCode = q.get('code');
+})();
 
-/* ================= Intensity engine =================
-   HRmax = 208 − 0.7·age (Tanaka). Thresholds via heart-rate reserve (Karvonen):
-     T = RHR + p·(HRmax − RHR),   moderate p = modPct, vigorous p = vigPct.
-   Each sample "owns" the time until the next sample, capped at gapMin (so sparse
-   resting samples can't credit long stretches). Minutes are attributed to the zone of that sample. */
-function hrMax(){ return 208 - 0.7 * state.settings.age; }
-function rhrFor(day){
-  const r = (state.days[day]||{}).rhr;
-  if (r) return r;
-  const all = Object.values(state.days).map(d => d.rhr).filter(Boolean).sort((a,b)=>a-b);
-  return all.length ? all[Math.floor(all.length/2)] : 60;   // median fallback, else 60 bpm
-}
-function thresholds(day){
-  const rhr = rhrFor(day), hrr = hrMax() - rhr;
-  return { rhr, mod: rhr + state.settings.modPct/100*hrr, vig: rhr + state.settings.vigPct/100*hrr };
-}
-const toMs = t => new Date(t).getTime();   // 'YYYY-MM-DDTHH:mm:ss' parses as local time
-let sortedHrCache = null;
-function sortedHr(){
-  if (!sortedHrCache) sortedHrCache = Object.entries(state.hr).map(([t,v]) => [t, toMs(t), v]).sort((a,b) => a[1]-b[1]);
-  return sortedHrCache;
-}
-function intensity(day){
-  const s = sortedHr(), th = thresholds(day), capMs = state.settings.gapMin * 60000;
-  let mod = 0, vig = 0, n = 0, maxBpm = 0;
-  for (let i = 0; i < s.length; i++){
-    const [t, ms, bpm] = s[i];
-    if (t.slice(0,10) !== day) continue;
-    n++; maxBpm = Math.max(maxBpm, bpm);
-    const next = s[i+1] ? s[i+1][1] : ms + 60000;
-    const dt = Math.min(next - ms, capMs) / 60000;
-    if (bpm >= th.vig) vig += dt; else if (bpm >= th.mod) mod += dt;
-  }
-  return { mod: Math.round(mod), vig: Math.round(vig), total: Math.round(mod + vig), n, maxBpm, th };
-}
-
-/* ================= Rendering ================= */
-const $ = id => document.getElementById(id);
-function dayKey(offset=0){ const d = new Date(); d.setDate(d.getDate()+offset); return d.toLocaleDateString('en-CA'); }
-function fmt(n, dp=0){ return n == null ? '–' : Number(n).toLocaleString('en-ZA',{maximumFractionDigits:dp}); }
-function weekDays(){   // Monday → today
-  const offs = (new Date().getDay() + 6) % 7;
-  return [...Array(offs+1)].map((_,i) => dayKey(i - offs));
-}
-let chartMetric = 'imin';
-
-function render(){
-  sortedHrCache = null;
-  const today = dayKey(), t = state.days[today] || {}, I = intensity(today);
-
-  $('imin').innerHTML = I.n ? `${I.total}<small>min</small>` : '–';
-  const dayGoal = state.settings.weeklyGoal / 7;
-  $('iminMod').style.width = Math.min(100, I.mod/dayGoal*100) + '%';
-  $('iminVig').style.width = Math.min(100 - Math.min(100, I.mod/dayGoal*100), I.vig/dayGoal*100) + '%';
-  $('modTxt').textContent = `Moderate ${I.mod} min`;
-  $('vigTxt').textContent = `Vigorous ${I.vig} min`;
-  $('steps').innerHTML = fmt(t.steps);
-  $('energy').innerHTML = t.energy == null ? '–' : `${fmt(t.energy)}<small>kcal</small>`;
-
-  const wk = weekDays().reduce((a,d) => a + intensity(d).total, 0);
-  $('wk').innerHTML = `${wk}<small>/ ${state.settings.weeklyGoal} min</small>`;
-  $('wkGoal').textContent = state.settings.weeklyGoal;
-  $('wkBar').style.width = Math.min(100, wk/state.settings.weeklyGoal*100) + '%';
-
-  $('lastSync').textContent = state.lastSync
-    ? 'Last sync ' + new Date(state.lastSync).toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'})
-    : 'No data yet — run the sync shortcut';
-
-  const days = [...Array(7)].map((_,i) => dayKey(i-6));
-  const vals = days.map(d => chartMetric === 'imin' ? intensity(d).total : ((state.days[d]||{})[chartMetric] || 0));
-  const max = Math.max(...vals, 1);
-  $('chart').innerHTML = days.map((d,i) => {
-    const wd = new Date(d+'T12:00').toLocaleDateString('en-ZA',{weekday:'narrow'});
-    return `<div title="${d}: ${fmt(vals[i])}"><b style="height:${vals[i]/max*100}%"></b><span>${wd}</span></div>`;
-  }).join('');
-
-  $('hrDetail').innerHTML = [
-    ['HR samples today', I.n],
-    ['Peak HR', I.n ? I.maxBpm + ' bpm' : '–'],
-    ['Resting HR used', Math.round(I.th.rhr) + ' bpm'],
-    ['HRmax (est.)', Math.round(hrMax()) + ' bpm'],
-    ['Moderate threshold', '≥ ' + Math.round(I.th.mod) + ' bpm'],
-    ['Vigorous threshold', '≥ ' + Math.round(I.th.vig) + ' bpm'],
-  ].map(([k,v]) => `<div class="kv"><span>${k}</span><span>${v}</span></div>`).join('');
-
-  const S = state.settings;
-  $('sAge').value = S.age; $('sMod').value = S.modPct; $('sVig').value = S.vigPct;
-  $('sGap').value = S.gapMin; $('sGoal').value = S.weeklyGoal;
-}
-
-let toastTimer;
-function toast(msg, err=false){
-  const el = $('toast'); el.textContent = msg; el.className = 'toast on' + (err ? ' err' : '');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'toast', 3000);
-}
-
-/* ================= Actions ================= */
-$('btnRun').onclick = () => { location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME); };
-$('btnPaste').onclick = async () => {
-  try { ingest(await navigator.clipboard.readText()); }
-  catch(e){ toast('Clipboard blocked — use Manual paste below', true); document.querySelector('details').open = true; }
-};
-$('btnParse').onclick = () => ingest($('raw').value);
-$('metricSeg').onclick = e => {
-  const b = e.target.closest('button'); if (!b) return;
-  chartMetric = b.dataset.m;
-  [...$('metricSeg').children].forEach(x => x.classList.toggle('on', x === b));
-  render();
-};
-for (const [id, key] of [['sAge','age'],['sMod','modPct'],['sVig','vigPct'],['sGap','gapMin'],['sGoal','weeklyGoal']]){
-  $(id).onchange = e => {
-    const v = num(e.target.value);
-    if (v == null || v <= 0){ render(); return; }
-    state.settings[key] = v; save(); render();
+/* ---------------- sync ---------------- */
+function slim(a, prev = {}){
+  return {
+    id: a.id, name: a.name, type: a.sport_type || a.type, start: a.start_date,
+    dist: a.distance || 0, moving: a.moving_time || 0, elapsed: a.elapsed_time || 0,
+    elev: a.total_elevation_gain || 0, avgHr: a.average_heartrate ?? null, maxHr: a.max_heartrate ?? null,
+    avgSpeed: a.average_speed || 0, poly: a.map?.summary_polyline || '',
+    kcal: prev.kcal   // undefined = not fetched yet, null = Strava has none
   };
 }
-$('btnDemo').onclick = () => {
-  // 14 days: resting HR ~ every 10 min, plus a 40-min workout most days (samples every 1 min)
-  const lines = [], pad = n => String(n).padStart(2,'0');
-  for (let i = -13; i <= 0; i++){
-    const d = dayKey(i);
-    lines.push(`D|steps|${d}|${Math.round(5000 + Math.random()*9000)}`);
-    lines.push(`D|energy|${d}|${Math.round(250 + Math.random()*500)}`);
-    lines.push(`D|rhr|${d}|${Math.round(56 + Math.random()*6)}`);
-    for (let m = 6*60; m < 22*60; m += 10) lines.push(`H|${d}T${pad(Math.floor(m/60))}:${pad(m%60)}:00|${Math.round(65 + Math.random()*20)}`);
-    if (Math.random() < .7){
-      const start = 17*60 + 5;
-      for (let k = 0; k < 40; k++){
-        const m = start + k, bpm = Math.round(120 + 35*Math.sin(Math.PI*k/40) + Math.random()*8);
-        lines.push(`H|${d}T${pad(Math.floor(m/60))}:${pad(m%60)}:30|${bpm}`);
-      }
-    }
-  }
-  ingest(lines.join('\n'));
-};
-$('btnExport').onclick = () => {
-  const blob = new Blob([JSON.stringify(state)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = `vitamin-me-backup-${dayKey()}.json`; a.click();
-};
-$('btnImport').onclick = () => $('file').click();
-$('file').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
+let syncing = false;
+async function sync(){
+  if (syncing) return;
+  if (!store.get(K.tok, null)){ toast('Connect Strava in Settings first.', true); location.hash = '#/settings'; return; }
+  syncing = true; setSyncBtn(true);
   try {
-    const s = JSON.parse(await f.text());
-    if (!s.days) throw new Error('not a Vitamin Me backup');
-    state = { ...blank(), ...s, hr: s.hr || {}, settings: { ...DEFAULT_SETTINGS, ...(s.settings||{}) } };
-    save(); render(); toast('Backup restored');
-  } catch(err){ toast('Import failed: ' + err.message, true); }
-};
-$('btnClear').onclick = () => {
-  if (confirm('Delete all Vitamin Me data on this device?')){ state = blank(); save(); render(); toast('Cleared'); }
-};
+    const acts = store.get(K.acts, {}), meta = store.get(K.meta, {});
+    const after = meta.latest ? meta.latest - 3600 : Math.floor(Date.now()/1000) - FIRST_SYNC_DAYS*86400;
+    let newest = meta.latest || 0, added = 0;
+    for (let page = 1; page <= 10; page++){
+      const list = await api(`/athlete/activities?after=${after}&per_page=100&page=${page}`);
+      for (const a of list){
+        if (!acts[a.id]) added++;
+        acts[a.id] = slim(a, acts[a.id]);
+        newest = Math.max(newest, Math.floor(Date.parse(a.start_date)/1000));
+      }
+      if (list.length < 100) break;
+    }
+    store.set(K.acts, acts);
+    store.set(K.meta, { ...meta, latest: newest, lastSync: Date.now() });
 
-render();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+    const missing = Object.values(acts).filter(a => a.kcal === undefined)
+                      .sort((x,y) => y.start.localeCompare(x.start)).slice(0, DETAILS_PER_SYNC);
+    for (const a of missing){ try { await detail(a.id); } catch(e){ break; } }
+
+    toast(added ? `Synced ${added} new workout${added > 1 ? 's' : ''}.` : 'Up to date.');
+  } catch(e){ toast(e.message, true); }
+  finally { syncing = false; setSyncBtn(false); route(); }
+}
+async function detail(id){
+  let d = await idb.get('d' + id);
+  if (!d){
+    const a = await api(`/activities/${id}`);
+    d = { calories: a.calories ?? null, splits: a.splits_metric || [], poly: a.map?.polyline || a.map?.summary_polyline || '',
+          device: a.device_name || '', description: a.description || '' };
+    await idb.set('d' + id, d);
+    const acts = store.get(K.acts, {});
+    if (acts[id]){ acts[id].kcal = d.calories; store.set(K.acts, acts); }
+  }
+  return d;
+}
+async function streams(id){
+  let s = await idb.get('s' + id);
+  if (!s){
+    s = await api(`/activities/${id}/streams?keys=time,heartrate,distance&key_by_type=true`);
+    await idb.set('s' + id, s);
+  }
+  return s;
+}
+
+/* ---------------- formatting ---------------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const km = m => m >= 50 ? (m/1000).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
+function dur(s){
+  s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`;
+}
+const PACED = new Set(['Run','TrailRun','VirtualRun','Walk','Hike']);
+function paceOrSpeed(a){
+  if (!a.dist || !a.moving) return null;
+  if (PACED.has(a.type)){ const spk = a.moving / (a.dist/1000); return `${dur(spk)} /km`; }
+  return `${(a.dist/a.moving*3.6).toFixed(1)} km/h`;
+}
+const typeName = t => ({ WeightTraining:'Strength', HighIntensityIntervalTraining:'HIIT', TrailRun:'Trail run', VirtualRun:'Treadmill run' }[t])
+                      || String(t || 'Workout').replace(/([a-z])([A-Z])/g, '$1 $2');
+const when = iso => new Date(iso).toLocaleString('en-ZA', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+
+/* Google encoded polyline → [[lat,lng],…] */
+function decodePoly(str){
+  const pts = []; let i = 0, lat = 0, lng = 0;
+  while (i < str.length){
+    for (const which of [0,1]){
+      let b, shift = 0, res = 0;
+      do { b = str.charCodeAt(i++) - 63; res |= (b & 31) << shift; shift += 5; } while (b >= 32);
+      const d = (res & 1) ? ~(res >> 1) : (res >> 1);
+      if (which === 0) lat += d; else lng += d;
+    }
+    pts.push([lat/1e5, lng/1e5]);
+  }
+  return pts;
+}
+function routeSvg(poly, size = 52){
+  const pts = decodePoly(poly); if (pts.length < 2) return null;
+  const k = Math.cos(pts[0][0] * Math.PI/180);
+  const xs = pts.map(p => p[1]*k), ys = pts.map(p => -p[0]);
+  const minX = Math.min(...xs), minY = Math.min(...ys), span = Math.max(Math.max(...xs)-minX, Math.max(...ys)-minY) || 1;
+  const pad = 4, sc = (size - 2*pad) / span;
+  const ox = pad + (size - 2*pad - (Math.max(...xs)-minX)*sc)/2, oy = pad + (size - 2*pad - (Math.max(...ys)-minY)*sc)/2;
+  const d = xs.map((x,i) => `${i ? 'L' : 'M'}${(ox + (x-minX)*sc).toFixed(1)} ${(oy + (ys[i]-minY)*sc).toFixed(1)}`).join('');
+  return `<svg viewBox="0 0 ${size} ${size}" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--orange)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/* ---------------- views ---------------- */
+let map = null;
+function teardownMap(){ if (map){ map.remove(); map = null; } }
+
+function sorted(){ return Object.values(store.get(K.acts, {})).sort((x,y) => y.start.localeCompare(x.start)); }
+function periodTotals(acts, from){ const xs = acts.filter(a => new Date(a.start) >= from);
+  return { n: xs.length, dist: xs.reduce((s,a) => s + a.dist, 0), time: xs.reduce((s,a) => s + a.moving, 0),
+           runKm: xs.filter(a => PACED.has(a.type) && a.type !== 'Walk' && a.type !== 'Hike').reduce((s,a) => s + a.dist, 0)/1000 }; }
+
+function viewHome(){
+  const acts = sorted(), meta = store.get(K.meta, {}), tok = store.get(K.tok, null), cfg = store.get(K.cfg, {});
+  const status = tok
+    ? (meta.lastSync ? `Synced ${new Date(meta.lastSync).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' })}` : 'Connected, not synced yet')
+    : 'Not connected to Strava';
+  let html = `<h1 class="brand">Vitamin <i>Me</i></h1><div class="status">${esc(status)}</div>`;
+
+  if (!acts.length){
+    html += tok
+      ? `<div class="empty">No workouts yet.<button class="btn go" onclick="sync()">Sync from Strava</button></div>`
+      : `<div class="empty">Connect your Strava account to pull in your workouts.<button class="btn go" onclick="location.hash='#/settings'">${cfg.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
+    return html;
+  }
+
+  const now = new Date(), monday = new Date(now); monday.setHours(0,0,0,0); monday.setDate(monday.getDate() - (monday.getDay()+6)%7);
+  const month = new Date(now.getFullYear(), now.getMonth(), 1);
+  const wk = periodTotals(acts, monday), mo = periodTotals(acts, month);
+  const goal = cfg.weeklyKm || 20;
+  html += `<div class="period">
+      <div><div class="lbl">Running this week</div><div class="big">${wk.runKm.toFixed(1)}<small>km</small></div>
+        <div class="capsule" role="img" aria-label="${Math.round(wk.runKm/goal*100)}% of ${goal} km goal"><i style="width:${Math.min(100, wk.runKm/goal*100)}%"></i></div>
+        <div class="lbl" style="margin-top:6px">Goal ${goal} km</div></div>
+      <div><div class="lbl">${now.toLocaleString('en-ZA', { month:'long' })}</div><div class="big">${mo.runKm.toFixed(1)}<small>km</small></div>
+        <div class="lbl" style="margin-top:22px">${mo.n} workout${mo.n === 1 ? '' : 's'}, ${dur(mo.time)} moving</div></div>
+    </div>`;
+
+  html += `<h2>Workouts</h2>`;
+  html += acts.slice(0, 60).map(a => {
+    const svg = a.poly ? routeSvg(a.poly) : null, d = km(a.dist);
+    const sub = [a.moving ? dur(a.moving) : null, paceOrSpeed(a), a.avgHr ? `${Math.round(a.avgHr)} bpm` : null].filter(Boolean).map(x => `<span>${x}</span>`).join('');
+    return `<a class="act" href="#/a/${a.id}">
+      <div class="thumb">${svg || esc(typeName(a.type))}</div>
+      <div style="min-width:0"><div class="t">${esc(a.name)}</div><div class="m">${when(a.start)}</div><div class="m">${sub}</div></div>
+      <div class="r"><b>${d ? d + ' km' : '-'}</b><div>${a.kcal ? Math.round(a.kcal) + ' kcal' : a.kcal === undefined ? '' : '- kcal'}</div></div>
+    </a>`;
+  }).join('');
+  return html;
+}
+
+async function viewDetail(id){
+  const a = store.get(K.acts, {})[id];
+  if (!a) return `<button class="back" onclick="history.back()">Back</button><div class="empty">Workout not found.</div>`;
+  $('view').innerHTML = detailHtml(a, null, null) ;
+  let d = null, s = null;
+  try { d = await detail(id); } catch(e){ toast(e.message, true); }
+  try { s = await streams(id); } catch(e){ /* streams optional */ }
+  if (location.hash !== '#/a/' + id) return;          // navigated away meanwhile
+  $('view').innerHTML = detailHtml(store.get(K.acts, {})[id], d, s);
+  drawMap(d?.poly || a.poly);
+}
+
+function detailHtml(a, d, s){
+  const dk = km(a.dist), pace = paceOrSpeed(a);
+  const kcal = d ? (d.calories ? Math.round(d.calories) : '-') : '…';
+  const stat = (k, v) => `<div><div class="v">${v}</div><div class="k">${k}</div></div>`;
+  let html = `<button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/')">Workouts</button>
+    <div class="title">${esc(a.name)}</div>
+    <div class="status">${esc(typeName(a.type))}, ${when(a.start)}${d?.device ? ', ' + esc(d.device) : ''}</div>
+    <div id="map" class="${a.poly || d?.poly ? '' : 'nomap'}">${a.poly || d?.poly ? '' : 'No GPS route for this workout.'}</div>
+    <div class="stats">
+      <div class="hero"><div class="v">${dk ? dk + ' <span style="font-size:20px;color:var(--muted)">km</span>' : '-'}</div><div class="k">Distance</div></div>
+      ${stat('Moving time', dur(a.moving))}
+      ${stat(PACED.has(a.type) ? 'Avg pace' : 'Avg speed', pace || '-')}
+      ${stat('Calories', kcal)}
+      ${stat('Avg HR', a.avgHr ? Math.round(a.avgHr) : '-')}
+      ${stat('Max HR', a.maxHr ? Math.round(a.maxHr) : '-')}
+      ${stat('Elevation', a.elev ? Math.round(a.elev) + ' m' : '-')}
+    </div>`;
+  if (d?.description) html += `<p class="hint">${esc(d.description)}</p>`;
+
+  const hr = s?.heartrate?.data, t = s?.time?.data;
+  if (hr && t && hr.length > 1) html += `<h2>Heart rate</h2>${hrChart(t, hr, a.avgHr)}`;
+  else if (s) html += `<h2>Heart rate</h2><div class="hint">No heart-rate data recorded for this workout.</div>`;
+
+  const splits = (d?.splits || []).filter(x => x.distance > 100);
+  if (splits.length > 1 && PACED.has(a.type)){
+    const paces = splits.map(x => x.moving_time / (x.distance/1000)), fastest = Math.min(...paces), slowest = Math.max(...paces);
+    html += `<h2>Splits</h2><table><thead><tr><th>Km</th><th>Pace</th><th>HR</th><th>Elev</th></tr></thead><tbody>` +
+      splits.map((x,i) => {
+        const p = paces[i], w = slowest > fastest ? 20 + 60*(slowest - p)/(slowest - fastest) : 60;
+        return `<tr><td>${x.distance < 950 ? (x.distance/1000).toFixed(2) : i+1}</td>
+          <td><span class="splitbar" style="width:${w.toFixed(0)}px"></span>${dur(p)}</td>
+          <td>${x.average_heartrate ? Math.round(x.average_heartrate) : '-'}</td>
+          <td>${x.elevation_difference != null ? (x.elevation_difference > 0 ? '+' : '') + Math.round(x.elevation_difference) + ' m' : '-'}</td></tr>`;
+      }).join('') + `</tbody></table>`;
+  }
+  return html;
+}
+
+function hrChart(t, hr, avg){
+  const W = 600, H = 170, L = 34, R = 8, T = 10, B = 22;
+  const step = Math.max(1, Math.floor(hr.length / 300));
+  const pts = []; for (let i = 0; i < hr.length; i += step) pts.push([t[i], hr[i]]);
+  const tMax = t[t.length-1] || 1, lo = Math.floor((Math.min(...hr) - 5)/10)*10, hi = Math.ceil((Math.max(...hr) + 5)/10)*10;
+  const x = v => L + (W-L-R) * v / tMax, y = v => T + (H-T-B) * (1 - (v-lo)/(hi-lo));
+  const line = pts.map((p,i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join('');
+  const area = `${line}L${x(pts[pts.length-1][0]).toFixed(1)} ${H-B}L${x(pts[0][0]).toFixed(1)} ${H-B}Z`;
+  let grid = '';
+  for (let v = lo; v <= hi; v += (hi-lo > 60 ? 20 : 10))
+    grid += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+  const ticks = [0, tMax/2, tMax].map(v => `<text x="${x(v)}" y="${H-5}" text-anchor="${v === 0 ? 'start' : v === tMax ? 'end' : 'middle'}">${dur(v)}</text>`).join('');
+  const avgLine = avg ? `<line x1="${L}" x2="${W-R}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--teal)" stroke-dasharray="5 5"/>` : '';
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Heart rate over time, average ${Math.round(avg || 0)} bpm">
+    <defs><linearGradient id="hrg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ef476f" stop-opacity=".35"/><stop offset="1" stop-color="#ef476f" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<path d="${area}" fill="url(#hrg)"/><path d="${line}" fill="none" stroke="var(--red)" stroke-width="2" stroke-linejoin="round"/>${avgLine}${ticks}</svg>`;
+}
+
+function drawMap(poly){
+  teardownMap();
+  const el = $('map'); if (!poly || !el || typeof L === 'undefined') return;
+  const pts = decodePoly(poly); if (pts.length < 2) return;
+  map = L.map(el, { zoomControl: false, attributionControl: true });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+  const line = L.polyline(pts, { color: '#ff8a1f', weight: 4, opacity: .95 }).addTo(map);
+  L.circleMarker(pts[0], { radius: 6, color: '#10151c', weight: 2, fillColor: '#20b2a6', fillOpacity: 1 }).addTo(map);
+  L.circleMarker(pts[pts.length-1], { radius: 6, color: '#10151c', weight: 2, fillColor: '#ef476f', fillOpacity: 1 }).addTo(map);
+  map.fitBounds(line.getBounds(), { padding: [22, 22] });
+}
+
+function viewSettings(){
+  const cfg = store.get(K.cfg, {}), tok = store.get(K.tok, null);
+  let html = `<h1 class="brand">Settings</h1>`;
+  if (pendingCode){
+    html += `<h2>Finish connecting</h2>
+      <p class="hint">Strava sent you back to Safari instead of the app. Copy this code, open Vitamin Me from your home screen, and paste it under Settings.</p>
+      <div class="field"><input id="codeOut" readonly value="${esc(pendingCode)}"></div>
+      <button class="btn go" id="copyCode">Copy code</button>`;
+  }
+  html += `<h2>Strava</h2>`;
+  html += tok
+    ? `<p>Connected as <b>${esc(tok.athlete?.name || 'your account')}</b>.</p>
+       <button class="btn" id="disconnect">Disconnect Strava</button>`
+    : `<p class="hint">One-time setup. At <code>strava.com/settings/api</code>, create an application with Authorization Callback Domain <code>${esc(location.hostname)}</code>. Paste its Client ID and Client Secret here. They are stored only on this phone.</p>
+       <div class="field"><label for="cid">Client ID</label><input id="cid" inputmode="numeric" autocomplete="off" value="${esc(cfg.clientId || '')}"></div>
+       <div class="field"><label for="csec">Client Secret</label><input id="csec" type="password" autocomplete="off" value="${esc(cfg.clientSecret || '')}"></div>
+       <button class="btn go" id="connect">Save and connect Strava</button>
+       <div class="field" style="margin-top:22px"><label for="codeIn">Got a code from Safari? Paste it here</label><input id="codeIn" autocomplete="off"></div>
+       <button class="btn" id="useCode">Use code</button>`;
+  html += `<h2>Goals</h2>
+    <div class="field"><label for="goal">Weekly running goal (km)</label><input id="goal" type="number" inputmode="decimal" value="${esc(cfg.weeklyKm || 20)}"></div>
+    <h2>Data</h2>
+    <p class="hint">${Object.keys(store.get(K.acts, {})).length} workouts stored on this phone.</p>
+    <button class="btn" id="resync">Re-sync last 12 months</button>
+    <button class="btn danger" id="wipe">Delete all data on this phone</button>`;
+  return html;
+}
+function bindSettings(){
+  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  on('copyCode', async () => { try { await navigator.clipboard.writeText(pendingCode); toast('Code copied.'); } catch(e){ $('codeOut').select(); } });
+  on('connect', () => {
+    const clientId = $('cid').value.trim(), clientSecret = $('csec').value.trim();
+    if (!/^\d+$/.test(clientId) || clientSecret.length < 20){ toast('Check the Client ID (a number) and the 40-character Client Secret.', true); return; }
+    store.set(K.cfg, { ...store.get(K.cfg, {}), clientId, clientSecret });
+    connectStrava();
+  });
+  on('useCode', async () => {
+    const code = $('codeIn').value.trim(); if (!code){ toast('Paste the code first.', true); return; }
+    const clientId = $('cid').value.trim(), clientSecret = $('csec').value.trim();
+    if (clientId && clientSecret) store.set(K.cfg, { ...store.get(K.cfg, {}), clientId, clientSecret });
+    try { await exchangeCode(code); } catch(e){ toast(e.message, true); }
+  });
+  on('disconnect', () => { if (confirm('Disconnect Strava? Your stored workouts stay on this phone.')){ store.del(K.tok); route(); toast('Disconnected.'); } });
+  on('resync', () => { const m = store.get(K.meta, {}); delete m.latest; store.set(K.meta, m); sync(); });
+  on('wipe', async () => {
+    if (!confirm('Delete all workouts, tokens and settings from this phone?')) return;
+    Object.values(K).forEach(store.del); await idb.clear(); route(); toast('All data deleted.');
+  });
+  const g = $('goal'); if (g) g.onchange = () => { const v = parseFloat(g.value); if (v > 0) store.set(K.cfg, { ...store.get(K.cfg, {}), weeklyKm: v }); };
+}
+
+/* ---------------- router & chrome ---------------- */
+function route(){
+  teardownMap();
+  const h = location.hash || '#/';
+  if (h.startsWith('#/a/')) { viewDetail(h.slice(4)); }
+  else if (h === '#/settings'){ $('view').innerHTML = viewSettings(); bindSettings(); }
+  else $('view').innerHTML = viewHome();
+  window.scrollTo(0, 0);
+}
+function setSyncBtn(busy){ const b = $('navSync'); b.disabled = busy; b.textContent = busy ? 'Syncing…' : 'Sync'; }
+let toastTimer;
+function toast(msg, err = false){
+  const el = $('toast'); el.textContent = msg; el.className = 'toast on' + (err ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'toast', err ? 5000 : 2800);
+}
+$('navHome').onclick = () => { location.hash = '#/'; };
+$('navSettings').onclick = () => { location.hash = '#/settings'; };
+$('navSync').onclick = () => sync();
+window.addEventListener('hashchange', route);
+
+if (pendingCode) location.hash = '#/settings';
+route();
+// Auto-sync when opened, at most every 10 minutes
+if (store.get(K.tok, null) && Date.now() - (store.get(K.meta, {}).lastSync || 0) > 600000) sync();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>

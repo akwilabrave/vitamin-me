@@ -13,7 +13,7 @@
 <style>
   :root{
     --bg:#0d1117; --card:#161b22; --line:#262d36; --text:#e6edf3; --muted:#8b949e;
-    --accent:#ff9f1c; --accent2:#2ec4b6; --bad:#ef476f;
+    --accent:#ff9f1c; --accent2:#2ec4b6; --vig:#ef476f; --bad:#ef476f;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--text);
@@ -28,21 +28,21 @@
   .k{color:var(--muted);font-size:12px}
   .v{font-size:24px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}
   .v small{font-size:13px;color:var(--muted);font-weight:500;margin-left:3px}
-  .bar{height:5px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden}
-  .bar>i{display:block;height:100%;background:var(--accent2);border-radius:3px}
+  .bar{height:6px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden;display:flex}
+  .bar>i{display:block;height:100%;background:var(--accent2)}
+  .bar>i.vig{background:var(--vig)}
   .chart{display:flex;align-items:flex-end;gap:4px;height:110px;padding-top:6px}
   .chart div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
   .chart b{width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
   .chart span{font-size:10px;color:var(--muted);margin-top:4px}
-  .wk{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
-  .wk:last-child{border-bottom:0}
-  .wk .t{font-weight:600}
-  .wk .m{color:var(--muted);font-size:12px}
-  .wk .r{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
-  .empty{color:var(--muted);text-align:center;padding:18px 0}
+  .kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .kv:last-child{border-bottom:0}
+  .kv span:last-child{font-variant-numeric:tabular-nums}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
   .dock{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);
-    background:rgba(13,17,23,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;gap:8px}
-  button{font:inherit;border:0;border-radius:12px;padding:12px;font-weight:600;color:var(--text);background:var(--card);
+    background:rgba(13,17,23,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;gap:8px}
+  button{font:inherit;border-radius:12px;padding:12px;font-weight:600;color:var(--text);background:var(--card);
     border:1px solid var(--line);flex:1}
   button.primary{background:var(--accent);color:#111;border-color:var(--accent)}
   .row{display:flex;gap:8px;flex-wrap:wrap}
@@ -52,34 +52,59 @@
   .toast.on{opacity:1;transform:none}
   .toast.err{border-color:var(--bad)}
   textarea{width:100%;height:120px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;font:12px ui-monospace,monospace}
-  details summary{color:var(--muted);cursor:pointer;margin:6px 0}
+  details summary{color:var(--muted);cursor:pointer;margin:10px 0 6px}
   .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;margin-bottom:8px}
   .seg button{padding:6px;border:0;background:transparent;font-size:13px;color:var(--muted)}
   .seg button.on{background:var(--line);color:var(--text)}
+  .set{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+  .set input{width:80px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;text-align:right}
+  .note{color:var(--muted);font-size:12px;margin-top:6px}
 </style>
 </head>
 <body>
 <h1>Vitamin <span>Me</span></h1>
 <div class="sub" id="lastSync">No data yet</div>
 
-<h2 id="dayTitle">Today</h2>
+<h2>Today</h2>
 <div class="grid">
-  <div class="card"><div class="k">Steps</div><div class="v" id="steps">–</div><div class="bar"><i id="stepsBar"></i></div></div>
-  <div class="card"><div class="k">Active energy</div><div class="v" id="energy">–</div><div class="bar"><i id="energyBar"></i></div></div>
-  <div class="card"><div class="k">Exercise</div><div class="v" id="exercise">–</div><div class="bar"><i id="exerciseBar"></i></div></div>
-  <div class="card"><div class="k">Resting HR</div><div class="v" id="rhr">–</div></div>
+  <div class="card" style="grid-column:1/-1">
+    <div class="k">Intensity minutes</div>
+    <div class="v" id="imin">–</div>
+    <div class="bar" id="iminBar"><i id="iminMod"></i><i class="vig" id="iminVig"></i></div>
+    <div class="legend"><span><i style="background:var(--accent2)"></i><span id="modTxt">Moderate</span></span>
+      <span><i style="background:var(--vig)"></i><span id="vigTxt">Vigorous</span></span></div>
+  </div>
+  <div class="card"><div class="k">Steps</div><div class="v" id="steps">–</div></div>
+  <div class="card"><div class="k">Active energy</div><div class="v" id="energy">–</div></div>
+</div>
+
+<h2>This week</h2>
+<div class="card">
+  <div class="k">Intensity minutes · Mon–Sun · goal <span id="wkGoal"></span></div>
+  <div class="v" id="wk">–</div>
+  <div class="bar"><i id="wkBar"></i></div>
 </div>
 
 <h2>Last 7 days</h2>
 <div class="seg" id="metricSeg">
-  <button data-m="steps" class="on">Steps</button>
+  <button data-m="imin" class="on">Intensity</button>
+  <button data-m="steps">Steps</button>
   <button data-m="energy">Energy</button>
-  <button data-m="exercise">Exercise</button>
 </div>
 <div class="card"><div class="chart" id="chart"></div></div>
 
-<h2>Recent workouts</h2>
-<div class="card" id="workouts"><div class="empty">No workouts synced</div></div>
+<h2>Heart-rate detail (today)</h2>
+<div class="card" id="hrDetail"></div>
+
+<h2>Settings</h2>
+<div class="card">
+  <div class="set"><span>Age</span><input id="sAge" type="number" inputmode="numeric"></div>
+  <div class="set"><span>Moderate from (% HRR)</span><input id="sMod" type="number" inputmode="numeric"></div>
+  <div class="set"><span>Vigorous from (% HRR)</span><input id="sVig" type="number" inputmode="numeric"></div>
+  <div class="set"><span>Max gap credited (min)</span><input id="sGap" type="number" inputmode="decimal"></div>
+  <div class="set"><span>Weekly goal (min)</span><input id="sGoal" type="number" inputmode="numeric"></div>
+  <div class="note">Zones use heart-rate reserve: threshold = RHR + p·(HRmax − RHR), with HRmax = 208 − 0.7·age.</div>
+</div>
 
 <h2>Data</h2>
 <div class="row">
@@ -102,144 +127,184 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ---------- Config ---------- */
+/* ================= Config ================= */
 const SHORTCUT_NAME = 'Vitamin Me Sync';
-const GOALS = { steps: 10000, energy: 500, exercise: 30 };   // daily targets for the progress bars
 const STORE_KEY = 'vitaminme.v1';
+const HR_RETENTION_DAYS = 60;
+const DEFAULT_SETTINGS = { age: 22, modPct: 40, vigPct: 60, gapMin: 5, weeklyGoal: 150 };
 
-/* ---------- Storage ---------- */
-// Shape: { days: { 'YYYY-MM-DD': {steps, energy, exercise, rhr} }, workouts: { id: {...} }, lastSync }
+/* ================= Storage =================
+   state = {
+     days: { 'YYYY-MM-DD': { steps, energy, rhr } },
+     hr:   { 'YYYY-MM-DDTHH:mm:ss': bpm },      raw heart-rate samples (keyed by timestamp → dedupes re-syncs)
+     settings, lastSync
+   } */
+function blank(){ return { days:{}, hr:{}, settings:{...DEFAULT_SETTINGS}, lastSync:null }; }
 function load(){
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || blank(); } catch(e){ return blank(); }
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (!s) return blank();
+    return { ...blank(), ...s, hr: s.hr || {}, settings: { ...DEFAULT_SETTINGS, ...(s.settings||{}) } };
+  } catch(e){ return blank(); }
 }
-function blank(){ return { days:{}, workouts:{}, lastSync:null }; }
-function save(s){ try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch(e){ toast('Could not save: '+e.message, true); } }
+function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){ toast('Could not save: '+e.message, true); } }
 let state = load();
 
-/* ---------- Parser ----------
-   Line protocol produced by the Shortcut (pipe-separated, one record per line):
-     D|<metric>|<yyyy-MM-dd>|<value>
-       metric ∈ steps, energy (kcal), exercise (min), rhr (bpm)
-     W|<type>|<start yyyy-MM-dd'T'HH:mm>|<duration min>|<kcal>|<km>
-   Unknown or malformed lines are counted and skipped, never fatal. */
-const METRICS = new Set(['steps','energy','exercise','rhr']);
+/* ================= Parsing =================
+   Line protocol from the Shortcut:
+     D|<metric>|<yyyy-MM-dd>|<value>        metric ∈ steps, energy, rhr
+     H|<yyyy-MM-dd'T'HH:mm[:ss]>|<bpm>     one line per heart-rate sample */
+const METRICS = new Set(['steps','energy','rhr']);
 function num(x){
   if (x == null) return null;
-  // Handles "8432", "8,432", "8 432" (SA), "8.432,5", "32,5", "310 kcal"
   let s = String(x).replace(/[^\d.,-]/g,'');
   if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.')
       ? s.replace(/\./g,'').replace(',', '.') : s.replace(/,/g,'');
-  else if (/^\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g,'');                    // thousands
-  else s = s.replace(',', '.');                                                    // decimal comma
+  else if (/^\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g,'');
+  else s = s.replace(',', '.');
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : null;
 }
-function isoDay(x){
-  const m = String(x||'').match(/(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+function isoDay(x){ const m = String(x||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[1]}-${m[2]}-${m[3]}` : null; }
+function isoTime(x){
+  const m = String(x||'').match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  return m ? `${m[1]}T${m[2]}:${m[3]}:${m[4]||'00'}` : null;
 }
 function parse(text){
-  const out = { days:{}, workouts:{}, ok:0, bad:0 };
-  for (const rawLine of String(text).split(/\r?\n/)){
-    const line = rawLine.trim();
-    if (!line) continue;
+  const out = { days:{}, hr:{}, ok:0, bad:0, hrCount:0 };
+  for (const raw of String(text).split(/\r?\n/)){
+    const line = raw.trim(); if (!line) continue;
     const p = line.split('|').map(s => s.trim());
     if (p[0] === 'D' && METRICS.has(p[1])){
       const d = isoDay(p[2]), v = num(p[3]);
       if (!d || v == null){ out.bad++; continue; }
       out.days[d] = out.days[d] || {};
-      // Health "group by day" can return several rows per day from different sources; keep the max
-      // (sum would double-count watch + phone). rhr is an average, so last value wins.
       out.days[d][p[1]] = p[1] === 'rhr' ? v : Math.max(out.days[d][p[1]] || 0, v);
       out.ok++;
-    } else if (p[0] === 'W'){
-      const start = p[2] || '';
-      if (!isoDay(start)){ out.bad++; continue; }
-      const id = (p[1]||'Workout') + '@' + start;
-      out.workouts[id] = { type: p[1] || 'Workout', start, min: num(p[3]), kcal: num(p[4]), km: num(p[5]) };
-      out.ok++;
+    } else if (p[0] === 'H'){
+      const t = isoTime(p[1]), v = num(p[2]);
+      if (!t || v == null || v < 25 || v > 240){ out.bad++; continue; }   // reject sensor junk
+      out.hr[t] = v; out.ok++; out.hrCount++;
     } else out.bad++;
   }
   return out;
 }
-function merge(parsed){
-  for (const [d, vals] of Object.entries(parsed.days)) state.days[d] = { ...(state.days[d]||{}), ...vals };
-  Object.assign(state.workouts, parsed.workouts);
-  state.lastSync = new Date().toISOString();
-  save(state);
-}
 function ingest(text){
   const p = parse(text);
   if (!p.ok){ toast('No valid records found. Check the Shortcut output.', true); return; }
-  merge(p);
-  render();
-  toast(`Synced ${p.ok} records` + (p.bad ? ` (${p.bad} skipped)` : ''));
+  for (const [d, vals] of Object.entries(p.days)) state.days[d] = { ...(state.days[d]||{}), ...vals };
+  Object.assign(state.hr, p.hr);
+  pruneHr();
+  state.lastSync = new Date().toISOString();
+  save(); render();
+  toast(`Synced ${p.ok} records (${p.hrCount} HR)` + (p.bad ? `, ${p.bad} skipped` : ''));
+}
+function pruneHr(){
+  const cutoff = dayKey(-HR_RETENTION_DAYS);
+  for (const t of Object.keys(state.hr)) if (t.slice(0,10) < cutoff) delete state.hr[t];
 }
 
-/* ---------- Rendering ---------- */
-const $ = id => document.getElementById(id);
-function todayKey(offset=0){
-  const d = new Date(); d.setDate(d.getDate()+offset);
-  return d.toLocaleDateString('en-CA'); // yyyy-mm-dd in local time
+/* ================= Intensity engine =================
+   HRmax = 208 − 0.7·age (Tanaka). Thresholds via heart-rate reserve (Karvonen):
+     T = RHR + p·(HRmax − RHR),   moderate p = modPct, vigorous p = vigPct.
+   Each sample "owns" the time until the next sample, capped at gapMin (so sparse
+   resting samples can't credit long stretches). Minutes are attributed to the zone of that sample. */
+function hrMax(){ return 208 - 0.7 * state.settings.age; }
+function rhrFor(day){
+  const r = (state.days[day]||{}).rhr;
+  if (r) return r;
+  const all = Object.values(state.days).map(d => d.rhr).filter(Boolean).sort((a,b)=>a-b);
+  return all.length ? all[Math.floor(all.length/2)] : 60;   // median fallback, else 60 bpm
 }
+function thresholds(day){
+  const rhr = rhrFor(day), hrr = hrMax() - rhr;
+  return { rhr, mod: rhr + state.settings.modPct/100*hrr, vig: rhr + state.settings.vigPct/100*hrr };
+}
+const toMs = t => new Date(t).getTime();   // 'YYYY-MM-DDTHH:mm:ss' parses as local time
+let sortedHrCache = null;
+function sortedHr(){
+  if (!sortedHrCache) sortedHrCache = Object.entries(state.hr).map(([t,v]) => [t, toMs(t), v]).sort((a,b) => a[1]-b[1]);
+  return sortedHrCache;
+}
+function intensity(day){
+  const s = sortedHr(), th = thresholds(day), capMs = state.settings.gapMin * 60000;
+  let mod = 0, vig = 0, n = 0, maxBpm = 0;
+  for (let i = 0; i < s.length; i++){
+    const [t, ms, bpm] = s[i];
+    if (t.slice(0,10) !== day) continue;
+    n++; maxBpm = Math.max(maxBpm, bpm);
+    const next = s[i+1] ? s[i+1][1] : ms + 60000;
+    const dt = Math.min(next - ms, capMs) / 60000;
+    if (bpm >= th.vig) vig += dt; else if (bpm >= th.mod) mod += dt;
+  }
+  return { mod: Math.round(mod), vig: Math.round(vig), total: Math.round(mod + vig), n, maxBpm, th };
+}
+
+/* ================= Rendering ================= */
+const $ = id => document.getElementById(id);
+function dayKey(offset=0){ const d = new Date(); d.setDate(d.getDate()+offset); return d.toLocaleDateString('en-CA'); }
 function fmt(n, dp=0){ return n == null ? '–' : Number(n).toLocaleString('en-ZA',{maximumFractionDigits:dp}); }
-function setBar(id, v, goal){ $(id).style.width = Math.min(100, (v||0)/goal*100) + '%'; }
-let chartMetric = 'steps';
+function weekDays(){   // Monday → today
+  const offs = (new Date().getDay() + 6) % 7;
+  return [...Array(offs+1)].map((_,i) => dayKey(i - offs));
+}
+let chartMetric = 'imin';
 
 function render(){
-  const t = state.days[todayKey()] || {};
+  sortedHrCache = null;
+  const today = dayKey(), t = state.days[today] || {}, I = intensity(today);
+
+  $('imin').innerHTML = I.n ? `${I.total}<small>min</small>` : '–';
+  const dayGoal = state.settings.weeklyGoal / 7;
+  $('iminMod').style.width = Math.min(100, I.mod/dayGoal*100) + '%';
+  $('iminVig').style.width = Math.min(100 - Math.min(100, I.mod/dayGoal*100), I.vig/dayGoal*100) + '%';
+  $('modTxt').textContent = `Moderate ${I.mod} min`;
+  $('vigTxt').textContent = `Vigorous ${I.vig} min`;
   $('steps').innerHTML = fmt(t.steps);
   $('energy').innerHTML = t.energy == null ? '–' : `${fmt(t.energy)}<small>kcal</small>`;
-  $('exercise').innerHTML = t.exercise == null ? '–' : `${fmt(t.exercise)}<small>min</small>`;
-  $('rhr').innerHTML = t.rhr == null ? '–' : `${fmt(t.rhr)}<small>bpm</small>`;
-  setBar('stepsBar', t.steps, GOALS.steps);
-  setBar('energyBar', t.energy, GOALS.energy);
-  setBar('exerciseBar', t.exercise, GOALS.exercise);
+
+  const wk = weekDays().reduce((a,d) => a + intensity(d).total, 0);
+  $('wk').innerHTML = `${wk}<small>/ ${state.settings.weeklyGoal} min</small>`;
+  $('wkGoal').textContent = state.settings.weeklyGoal;
+  $('wkBar').style.width = Math.min(100, wk/state.settings.weeklyGoal*100) + '%';
 
   $('lastSync').textContent = state.lastSync
     ? 'Last sync ' + new Date(state.lastSync).toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'})
     : 'No data yet — run the sync shortcut';
 
-  // 7-day chart
-  const days = [...Array(7)].map((_,i) => todayKey(i-6));
-  const vals = days.map(d => (state.days[d]||{})[chartMetric] || 0);
+  const days = [...Array(7)].map((_,i) => dayKey(i-6));
+  const vals = days.map(d => chartMetric === 'imin' ? intensity(d).total : ((state.days[d]||{})[chartMetric] || 0));
   const max = Math.max(...vals, 1);
   $('chart').innerHTML = days.map((d,i) => {
     const wd = new Date(d+'T12:00').toLocaleDateString('en-ZA',{weekday:'narrow'});
     return `<div title="${d}: ${fmt(vals[i])}"><b style="height:${vals[i]/max*100}%"></b><span>${wd}</span></div>`;
   }).join('');
 
-  // workouts
-  const ws = Object.values(state.workouts).sort((a,b) => b.start.localeCompare(a.start)).slice(0, 10);
-  $('workouts').innerHTML = ws.length ? ws.map(w => {
-    const when = new Date(w.start.length > 10 ? w.start : w.start+'T00:00');
-    const meta = [w.min != null ? fmt(w.min)+' min' : null, w.kcal != null ? fmt(w.kcal)+' kcal' : null,
-                  w.km ? fmt(w.km,2)+' km' : null].filter(Boolean).join(' · ');
-    return `<div class="wk"><div><div class="t">${esc(w.type)}</div>
-      <div class="m">${when.toLocaleString('en-ZA',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>
-      <div class="r">${meta}</div></div>`;
-  }).join('') : '<div class="empty">No workouts synced</div>';
+  $('hrDetail').innerHTML = [
+    ['HR samples today', I.n],
+    ['Peak HR', I.n ? I.maxBpm + ' bpm' : '–'],
+    ['Resting HR used', Math.round(I.th.rhr) + ' bpm'],
+    ['HRmax (est.)', Math.round(hrMax()) + ' bpm'],
+    ['Moderate threshold', '≥ ' + Math.round(I.th.mod) + ' bpm'],
+    ['Vigorous threshold', '≥ ' + Math.round(I.th.vig) + ' bpm'],
+  ].map(([k,v]) => `<div class="kv"><span>${k}</span><span>${v}</span></div>`).join('');
+
+  const S = state.settings;
+  $('sAge').value = S.age; $('sMod').value = S.modPct; $('sVig').value = S.vigPct;
+  $('sGap').value = S.gapMin; $('sGoal').value = S.weeklyGoal;
 }
-function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 let toastTimer;
 function toast(msg, err=false){
   const el = $('toast'); el.textContent = msg; el.className = 'toast on' + (err ? ' err' : '');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'toast', 2800);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'toast', 3000);
 }
 
-/* ---------- Actions ---------- */
-$('btnRun').onclick = () => {
-  location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME);
-};
+/* ================= Actions ================= */
+$('btnRun').onclick = () => { location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME); };
 $('btnPaste').onclick = async () => {
-  try {
-    const txt = await navigator.clipboard.readText();
-    ingest(txt);
-  } catch(e){
-    toast('Clipboard blocked — use Manual paste below', true);
-    document.querySelector('details').open = true;
-  }
+  try { ingest(await navigator.clipboard.readText()); }
+  catch(e){ toast('Clipboard blocked — use Manual paste below', true); document.querySelector('details').open = true; }
 };
 $('btnParse').onclick = () => ingest($('raw').value);
 $('metricSeg').onclick = e => {
@@ -248,34 +313,49 @@ $('metricSeg').onclick = e => {
   [...$('metricSeg').children].forEach(x => x.classList.toggle('on', x === b));
   render();
 };
+for (const [id, key] of [['sAge','age'],['sMod','modPct'],['sVig','vigPct'],['sGap','gapMin'],['sGoal','weeklyGoal']]){
+  $(id).onchange = e => {
+    const v = num(e.target.value);
+    if (v == null || v <= 0){ render(); return; }
+    state.settings[key] = v; save(); render();
+  };
+}
 $('btnDemo').onclick = () => {
-  const lines = [];
+  // 14 days: resting HR ~ every 10 min, plus a 40-min workout most days (samples every 1 min)
+  const lines = [], pad = n => String(n).padStart(2,'0');
   for (let i = -13; i <= 0; i++){
-    const d = todayKey(i);
+    const d = dayKey(i);
     lines.push(`D|steps|${d}|${Math.round(5000 + Math.random()*9000)}`);
     lines.push(`D|energy|${d}|${Math.round(250 + Math.random()*500)}`);
-    lines.push(`D|exercise|${d}|${Math.round(10 + Math.random()*60)}`);
-    lines.push(`D|rhr|${d}|${Math.round(55 + Math.random()*10)}`);
-    if (i % 2 === 0) lines.push(`W|${['Running','Strength Training','Cycling','Walking'][(-i/2)%4]}|${d}T06:30|${Math.round(25+Math.random()*40)}|${Math.round(200+Math.random()*300)}|${(Math.random()*8).toFixed(2)}`);
+    lines.push(`D|rhr|${d}|${Math.round(56 + Math.random()*6)}`);
+    for (let m = 6*60; m < 22*60; m += 10) lines.push(`H|${d}T${pad(Math.floor(m/60))}:${pad(m%60)}:00|${Math.round(65 + Math.random()*20)}`);
+    if (Math.random() < .7){
+      const start = 17*60 + 5;
+      for (let k = 0; k < 40; k++){
+        const m = start + k, bpm = Math.round(120 + 35*Math.sin(Math.PI*k/40) + Math.random()*8);
+        lines.push(`H|${d}T${pad(Math.floor(m/60))}:${pad(m%60)}:30|${bpm}`);
+      }
+    }
   }
   ingest(lines.join('\n'));
 };
 $('btnExport').onclick = () => {
-  const blob = new Blob([JSON.stringify(state, null, 1)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify(state)], {type:'application/json'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = `vitamin-me-backup-${todayKey()}.json`; a.click();
+  a.href = URL.createObjectURL(blob); a.download = `vitamin-me-backup-${dayKey()}.json`; a.click();
 };
 $('btnImport').onclick = () => $('file').click();
 $('file').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
     const s = JSON.parse(await f.text());
-    if (!s.days || !s.workouts) throw new Error('not a Vitamin Me backup');
-    state = s; save(state); render(); toast('Backup restored');
+    if (!s.days) throw new Error('not a Vitamin Me backup');
+    state = { ...blank(), ...s, hr: s.hr || {}, settings: { ...DEFAULT_SETTINGS, ...(s.settings||{}) } };
+    save(); render(); toast('Backup restored');
   } catch(err){ toast('Import failed: ' + err.message, true); }
 };
 $('btnClear').onclick = () => {
-  if (confirm('Delete all Vitamin Me data on this device?')){ state = blank(); save(state); render(); toast('Cleared'); }
+  if (confirm('Delete all Vitamin Me data on this device?')){ state = blank(); save(); render(); toast('Cleared'); }
 };
 
 render();

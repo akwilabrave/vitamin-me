@@ -26,7 +26,7 @@ const SUGGESTIONS = [
 ];
 
 const shop = () => store.get(SHOP_KEY, { items: [], redemptions: [], goalId: null });
-const setShop = s => { store.set(SHOP_KEY, s); if (typeof scheduleBackup === 'function') scheduleBackup(); };
+const setShop = s => store.set(SHOP_KEY, { ...s, updated: Date.now() });
 const spent = () => shop().redemptions.reduce((s, r) => s + r.cost, 0);
 const balance = () => getLedger().total - spent();
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

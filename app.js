@@ -140,18 +140,23 @@ function slim(a, prev = {}){
     dist: a.distance || 0, moving: a.moving_time || 0, elapsed: a.elapsed_time || 0,
     elev: a.total_elevation_gain || 0, avgHr: a.average_heartrate ?? null, maxHr: a.max_heartrate ?? null,
     hasHr: !!a.has_heartrate, poly: a.map?.summary_polyline || '',
-    kcal: prev.kcal   // undefined = not fetched yet, null = Strava has none
+    kcal: prev.kcal,  // undefined = not fetched yet, null = Strava has none
+    be: prev.be, beFetched: prev.beFetched   // best efforts (runs), from the detail endpoint
   };
 }
+const DETAIL_V = 2;   // v2 adds best efforts
 async function detail(id){
   let d = await idb.get('d' + id);
-  if (!d){
+  const isRun = RUNS.has(store.get(K.acts, {})[id]?.type);
+  if (!d || (isRun && d.v !== DETAIL_V)){
     const a = await api(`/activities/${id}`);
-    d = { calories: a?.calories ?? null, splits: a?.splits_metric || [], poly: a?.map?.polyline || a?.map?.summary_polyline || '',
-          device: a?.device_name || '', description: a?.description || '' };
+    const keep = new Set(Records.EFFORTS.map(e => e[0]));
+    d = { v: DETAIL_V, calories: a?.calories ?? null, splits: a?.splits_metric || [], poly: a?.map?.polyline || a?.map?.summary_polyline || '',
+          device: a?.device_name || '', description: a?.description || '',
+          be: Object.fromEntries((a?.best_efforts || []).filter(e => keep.has(e.name)).map(e => [e.name, e.elapsed_time])) };
     await idb.set('d' + id, d);
     const acts = store.get(K.acts, {});
-    if (acts[id]){ acts[id].kcal = d.calories; store.set(K.acts, acts); }
+    if (acts[id]){ acts[id].kcal = d.calories; acts[id].be = d.be; acts[id].beFetched = true; store.set(K.acts, acts); invalidate(); }
   }
   return d;
 }
@@ -191,6 +196,8 @@ function getLedger(){
   if (ledgerCache) return ledgerCache;
   const acts = Object.values(store.get(K.acts, {}));
   ledgerCache = Scoring.ledger(acts, fxGet() || {}, cfg().params || {});
+  ledgerCache.rec = Records.compute(acts, ledgerCache, cfg().params || {});
+  Records.mergeIntoLedger(ledgerCache, ledgerCache.rec);
   return ledgerCache;
 }
 const invalidate = () => { ledgerCache = null; };
@@ -233,7 +240,7 @@ async function sync(){
           }
           fx[a.id] = computeFx(await hrStream(a.id));
         }
-        if (a.kcal === undefined && budget > 0){ budget--; await detail(a.id); }
+        if ((a.kcal === undefined || (RUNS.has(a.type) && !a.beFetched)) && budget > 0){ budget--; await detail(a.id); }
       }
     } catch(e){ if (!(e instanceof RateLimit)) throw e; msg = e.message; }
     fxSet(fx); invalidate();
@@ -367,6 +374,7 @@ function pointsHtml(a){
   if (r.km >= 0.05) rows.push(['Distance', `${nf(r.km, 2)} km`, r.dist]);
   if (r.mult > 1){ const boost = Math.round((r.effort + r.dist) * r.mult) - (r.effort + r.dist); rows.push(['Streak boost', `+${Math.round((r.mult-1)*100)}%`, boost]); }
   if (r.bonus) rows.push(['Consistency', r.bonusLabel, r.bonus]);
+  for (const e of r.prs || []) rows.push([e.label, e.t ? `${dur(e.t)}, beating ${dur(e.prev)} by ${dur(e.prev - e.t)}` : `${nf(e.km, 2)} km, beating ${nf(e.prevKm, 2)} km`, e.pts]);
   return `<h2>Points</h2><table class="ledger"><tbody>` +
     rows.map(([k, sub, v]) => `<tr><td>${k}<small>${sub}</small></td><td class="p">+${nf(v)}</td></tr>`).join('') +
     `<tr class="total"><td>Total</td><td class="p">+${nf(r.total)}</td></tr></tbody></table>
@@ -446,6 +454,56 @@ function drawMap(poly){
   L.circleMarker(pts[0], { radius: 6, color: ring, weight: 2, fillColor: css('--accent2'), fillOpacity: 1 }).addTo(map);
   L.circleMarker(pts[pts.length-1], { radius: 6, color: ring, weight: 2, fillColor: css('--hr'), fillOpacity: 1 }).addTo(map);
   map.fitBounds(line.getBounds(), { padding: [22, 22] });
+}
+
+/* ---------------- progress: records + vitamins ---------------- */
+const shortDate = iso => new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+function recordValue(r){
+  if (r.kind === 'time') return dur(r.t);
+  if (r.kind === 'km') return `${nf(r.value, r.key === 'week' ? 1 : 2)} km`;
+  return `${r.value} week${r.value === 1 ? '' : 's'}`;
+}
+function capsuleSvg(v){
+  const done = !!v.unlocked, pct = done ? 100 : Math.max(0, Math.min(100, v.value / v.target * 100));
+  return `<svg class="cap ${done ? 'on' : ''}" viewBox="0 0 120 52" role="img" aria-label="${esc(v.name)}${done ? ', collected' : `, ${Math.round(pct)}% progress`}">
+    <defs><clipPath id="cp-${v.id}"><rect x="2" y="2" width="116" height="48" rx="24"/></clipPath></defs>
+    ${done ? `<rect x="2" y="2" width="58" height="48" fill="var(--accent)" clip-path="url(#cp-${v.id})"/><rect x="60" y="2" width="58" height="48" fill="var(--accent2)" clip-path="url(#cp-${v.id})"/>
+              <rect x="10" y="9" width="40" height="7" rx="3.5" fill="#fff" opacity=".35"/>`
+           : `<rect x="2" y="2" width="${(116 * pct / 100).toFixed(1)}" height="48" fill="var(--accent)" opacity=".22" clip-path="url(#cp-${v.id})"/>`}
+    <rect x="2" y="2" width="116" height="48" rx="24" fill="none" stroke="${done ? 'none' : 'var(--line)'}" stroke-width="2"/>
+    <text x="60" y="34" text-anchor="middle" class="capsym">${esc(v.sym)}</text></svg>`;
+}
+function viewProgress(){
+  const R = getLedger().rec;
+  if (!R || !Object.keys(store.get(K.acts, {})).length)
+    return `<h1 class="brand">Progress</h1><div class="empty">Sync your workouts first. Records and vitamins are worked out from your history.</div>`;
+  const got = R.vitamins.filter(v => v.unlocked).length;
+  let html = `<h1 class="brand">Progress</h1><h2>Records</h2>`;
+  html += R.records.length ? `<div class="recs">` + R.records.map(r => {
+    const tag = r.actId ? 'a' : 'div', href = r.actId ? ` href="#/a/${r.actId}"` : '';
+    const sub = r.kind === 'time' && r.prev ? `${shortDate(r.date)}, ${dur(r.prev - r.t)} faster than before`
+              : r.kind === 'km' && r.prev ? `${shortDate(r.date)}, up from ${nf(r.prev, 2)} km`
+              : r.date ? (r.key === 'week' ? `Week of ${shortDate(r.date)}` : shortDate(r.date)) : '3+ workouts every week';
+    return `<${tag} class="rec"${href}><div><div class="t">${esc(r.label)}</div><div class="m">${sub}</div></div><div class="rv">${recordValue(r)}</div></${tag}>`;
+  }).join('') + `</div>` : `<p class="hint">Records appear once you've synced runs.</p>`;
+  html += `<p class="hint">Beating a 1 km, 5 km, 10 km or half-marathon time earns +${getLedger().params.prPts}, a new longest run +${getLedger().params.longestPts}. Times are Strava's best efforts within your runs.</p>`;
+
+  html += `<h2>Vitamins <span class="count">${got} of ${R.vitamins.length} collected</span></h2><div class="vits">` +
+    R.vitamins.map(v => `<div class="vit ${v.unlocked ? 'on' : ''}">${capsuleSvg(v)}
+      <div class="t">${esc(v.name)}</div><div class="m">${esc(v.desc)}</div>
+      <div class="m s">${v.unlocked ? `Collected ${shortDate(v.unlocked.date)}` : `${nf(v.value, v.unit === 'km' ? 1 : 0)} of ${nf(v.target, v.target % 1 ? 1 : 0)} ${v.unit}`}</div></div>`).join('') + `</div>
+    <p class="hint">Each vitamin collected earns +${getLedger().params.vitaminPts} points.</p>`;
+  return html;
+}
+/* Toast newly collected vitamins once. On first run, history unlocks are summarised. */
+function announceVitamins(){
+  const R = getLedger().rec; if (!R) return;
+  const meta = store.get(K.meta, {}), seen = new Set(meta.seenVit || []);
+  const fresh = R.vitamins.filter(v => v.unlocked && !seen.has(v.id));
+  if (!fresh.length) return;
+  store.set(K.meta, { ...meta, seenVit: R.vitamins.filter(v => v.unlocked).map(v => v.id) });
+  setTimeout(() => toast(fresh.length === 1 ? `New vitamin collected: ${fresh[0].name}. ${fresh[0].desc}.`
+                                            : `You've collected ${fresh.length} vitamins. See them under Progress.`), 3200);
 }
 
 /* ---------------- settings ---------------- */
@@ -618,12 +676,13 @@ function route(){
   if (h.startsWith('#/a/')) viewDetail(h.slice(4));
   else if (h === '#/settings'){ $('view').innerHTML = viewSettings(); bindSettings(); }
   else if (h.startsWith('#/shop') && routeShop(h)){}
-  else { $('view').innerHTML = viewHome(); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
+  else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); }
+  else { $('view').innerHTML = viewHome(); announceVitamins(); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
   markNav();
 }
 function markNav(){
-  const h = location.hash || '#/', cur = h.startsWith('#/shop') ? 'navShop' : h === '#/settings' ? 'navSettings' : 'navHome';
-  ['navHome','navShop','navSettings'].forEach(id => $(id).toggleAttribute('aria-current', id === cur));
+  const h = location.hash || '#/', cur = h.startsWith('#/shop') ? 'navShop' : h === '#/settings' ? 'navSettings' : h === '#/progress' ? 'navProgress' : 'navHome';
+  ['navHome','navProgress','navShop','navSettings'].forEach(id => $(id).toggleAttribute('aria-current', id === cur));
 }
 function setSyncBtn(busy){ const b = $('navSync'); b.disabled = busy; b.classList.toggle('spin', busy); b.setAttribute('aria-label', busy ? 'Syncing' : 'Sync from Strava'); }
 let toastTimer;
@@ -634,6 +693,7 @@ function toast(msg, err = false){
 $('navHome').onclick = () => { location.hash = '#/'; };
 $('navSettings').onclick = () => { location.hash = '#/settings'; };
 $('navShop').onclick = () => { location.hash = '#/shop'; };
+$('navProgress').onclick = () => { location.hash = '#/progress'; };
 $('navSync').onclick = () => { if (!syncing && confirm('Sync your latest workouts from Strava?')) sync(); };
 window.addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
 

@@ -33,6 +33,10 @@
     ['streakPct',     5,  'Streak boost per 3-workout week',   '%',    'Consistency', 1],
     ['streakCapPct', 25,  'Maximum streak boost',              '%',    'Consistency', 1],
     ['restBonus',    10,  'Rest day after 3 active days',      'pts',  'Consistency', 1],
+
+    ['prPts',        50,  'New 1 km, 5 km, 10 km or half record', 'pts', 'Records and vitamins', 5],
+    ['longestPts',   30,  'New longest run',                   'pts',  'Records and vitamins', 5],
+    ['vitaminPts',   40,  'Each vitamin unlocked',             'pts',  'Records and vitamins', 5],
   ];
   const DEFAULTS = Object.fromEntries(PARAMS.map(p => [p[0], p[1]]));
 

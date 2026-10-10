@@ -122,7 +122,7 @@
   .dock{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;
     padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);background:var(--dock);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);z-index:900}
-  .dock button{flex:1;max-width:120px;border:0;border-radius:14px;padding:11px 0;background:var(--panel);color:var(--text);display:grid;place-items:center}
+  .dock button{flex:1;max-width:110px;border:0;border-radius:14px;padding:11px 0;background:var(--panel);color:var(--text);display:grid;place-items:center}
   .dock svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .dock button.spin svg{animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -149,6 +149,21 @@
   .sug input[type=checkbox],.check input{width:20px;height:20px;accent-color:var(--accent)}
   .sug small{display:block;color:var(--muted);font-size:12px}
   .sugcost{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:7px 8px;text-align:right}
+  .recs{display:grid;gap:0}
+  .rec{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);text-decoration:none}
+  .rec:last-child{border-bottom:0}
+  .rec .t{font-weight:600}
+  .rec .m{color:var(--muted);font-size:13px}
+  .rec .rv{font-family:var(--round);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  h2 .count{font-family:-apple-system,system-ui,sans-serif;font-size:14px;font-weight:500;color:var(--muted);margin-left:8px}
+  .vits{display:grid;grid-template-columns:1fr 1fr;gap:20px 14px}
+  .vit .cap{width:100%;max-width:150px;height:auto;display:block;margin-bottom:8px}
+  .vit .capsym{font-family:var(--round);font-size:22px;font-weight:800;fill:var(--muted)}
+  .vit .cap.on .capsym{fill:var(--accent-ink)}
+  .vit .t{font-weight:650}
+  .vit .m{color:var(--muted);font-size:13px;line-height:1.35}
+  .vit .s{margin-top:4px;color:var(--text);font-variant-numeric:tabular-nums}
+  .vit:not(.on) .t{color:var(--muted)}
   .check{display:flex;gap:10px;align-items:center;margin:14px 0;font-size:15px}
   .toast{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 10px);max-width:608px;margin:0 auto;
     background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--text);
@@ -163,6 +178,7 @@
 
 <nav class="dock">
   <button id="navHome" aria-label="Workouts" title="Workouts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></button>
+  <button id="navProgress" aria-label="Progress" title="Progress"><svg viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(-40 12 12)"><rect x="2.5" y="8" width="19" height="8" rx="4"/><path d="M12 8v8"/></g></svg></button>
   <button id="navShop" aria-label="Shop" title="Shop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg></button>
   <button id="navSync" class="go" aria-label="Sync from Strava" title="Sync from Strava"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20.5V16h-4.5"/></svg></button>
   <button id="navSettings" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></button>
@@ -171,6 +187,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="scoring.js"></script>
+<script src="records.js"></script>
 <script src="shop.js"></script>
 <script src="app.js"></script>
 </body>

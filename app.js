@@ -37,7 +37,7 @@ const idb = (() => {
   };
 })();
 const cfg = () => store.get(K.cfg, {});
-const setCfg = patch => store.set(K.cfg, { ...cfg(), ...patch });
+const setCfg = patch => { store.set(K.cfg, { ...cfg(), ...patch }); if (typeof scheduleBackup === 'function') scheduleBackup(); };
 const params = () => ({ ...Scoring.DEFAULTS, ...(cfg().params || {}) });
 
 /* ---------------- theme ---------------- */
@@ -494,11 +494,12 @@ function viewSettings(){
   }
   html += `<button class="btn" id="resetParams">Reset scoring to defaults</button>`;
 
+  html += backupSettingsHtml();
   html += `<h2>Data</h2>
     <p class="hint">${Object.keys(store.get(K.acts, {})).length} workouts stored on this phone.</p>
     <button class="btn" id="resync">Re-sync last 12 months</button>
-    <button class="btn" id="exportBk">Export backup</button>
-    <button class="btn" id="importBk">Import backup</button><input type="file" id="bkFile" accept="application/json,.json" hidden>
+    <button class="btn" id="exportBk">Export backup file</button>
+    <button class="btn" id="importBk">Import backup file</button><input type="file" id="bkFile" accept="application/json,.json" hidden>
     <p class="hint">The backup holds your shop, redemptions, scoring settings and appearance. Workouts aren't included; they re-sync from Strava.</p>
     <button class="btn danger" id="wipe">Delete all data on this phone</button>`;
   return html;
@@ -529,7 +530,7 @@ function bindSettings(){
   on('resync', () => { const m = store.get(K.meta, {}); delete m.latest; store.set(K.meta, m); sync(); });
   on('wipe', async () => {
     if (!confirm('Delete all workouts, tokens and settings from this phone?')) return;
-    Object.values(K).forEach(store.del); store.del(SHOP_KEY); await idb.clear(); invalidate(); applyTheme(); route(); toast('All data deleted.');
+    clearTimeout(bkTimer); Object.values(K).forEach(store.del); store.del(SHOP_KEY); store.del(BK_KEY); await idb.clear(); invalidate(); applyTheme(); route(); toast('All data deleted.');
   });
   on('exportBk', () => {
     const { clientSecret, ...safeCfg } = cfg();
@@ -549,6 +550,7 @@ function bindSettings(){
       applyTheme(); await rescoreAll(); invalidate(); route(); toast('Backup restored.');
     } catch(e){ toast('Import failed: ' + e.message, true); }
   };
+  bindBackupSettings(on);
   const g = $('goal'); if (g) g.onchange = () => { const v = parseFloat(g.value); if (v > 0){ setCfg({ weeklyKm: v }); toast('Goal saved.'); } };
 
   document.querySelectorAll('[data-param]').forEach(inp => inp.onchange = async () => {
@@ -567,6 +569,58 @@ function bindSettings(){
   });
 }
 
+/* ---------------- cloud backup settings ---------------- */
+function backupSettingsHtml(){
+  const b = bkCfg();
+  let html = `<h2>Encrypted cloud backup</h2>`;
+  if (!backupReady()){
+    const owner = location.hostname.endsWith('.github.io') ? location.hostname.split('.')[0] : 'your-username';
+    return html + `<p class="hint">Keeps an encrypted copy of your shop and settings in a private GitHub repo, updated automatically after every change.
+      You need a private repo (e.g. <code>vitamin-me-data</code>) and a fine-grained token with access to only that repo and <i>Contents: Read and write</i>.</p>
+      <div class="field"><label for="bkRepo">Private repo</label><input id="bkRepo" autocomplete="off" autocapitalize="none" value="${esc(owner)}/vitamin-me-data"></div>
+      <div class="field"><label for="bkToken">Fine-grained token</label><input id="bkToken" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+      <div class="field"><label for="bkPass">Encryption passphrase</label><input id="bkPass" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="bkPass2">Repeat passphrase</label><input id="bkPass2" type="password" autocomplete="new-password"></div>
+      <p class="hint">The passphrase is never stored or sent anywhere. Without it the backup can't be opened, by anyone, including you. Store it in a password manager.</p>
+      <button class="btn go" id="bkConnect">Turn on encrypted backup</button>`;
+  }
+  const last = b.lastBackup ? new Date(b.lastBackup).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' }) : 'not yet';
+  html += `<div class="bkstatus ${b.lastError ? 'err' : ''}">${b.lastError ? `<b>Last backup failed.</b> ${esc(b.lastError)}`
+            : `On, to <b>${esc(b.owner)}/${esc(b.repo)}</b>. Last backup: <b>${esc(last)}</b>.`}</div>
+    <button class="btn" id="bkNow">Back up now</button>
+    <button class="btn" id="bkRestore">Restore from backup</button>
+    <button class="btn danger" id="bkOff">Turn off cloud backup</button>`;
+  return html;
+}
+function bindBackupSettings(on){
+  const rerender = () => { const sc = scrollY; $('view').innerHTML = viewSettings(); bindSettings(); scrollTo(0, sc); };
+  on('bkConnect', async () => {
+    const [owner, repo] = $('bkRepo').value.trim().split('/'), token = $('bkToken').value.trim(), pass = $('bkPass').value;
+    if (!owner || !repo){ toast('Enter the repo as owner/name.', true); return; }
+    if (!token){ toast('Paste the fine-grained token.', true); return; }
+    if (pass !== $('bkPass2').value){ toast("The passphrases don't match.", true); return; }
+    const btn = $('bkConnect'); btn.disabled = true; btn.textContent = 'Deriving key…';
+    try {
+      const existing = await connectBackup(owner, repo, token, pass);
+      if (existing && confirm(`A backup from ${new Date(existing.exported).toLocaleString('en-ZA')} already exists ` +
+          `(${existing.shop.items.length} rewards, ${existing.shop.redemptions.length} redemptions). Restore it to this phone?\n\nCancel keeps this phone's data and replaces the backup.`)){
+        await applyPayload(existing); setBk({ lastBackup: existing.exported }); toast('Backup restored.');
+      } else { await backupNow(); toast('Encrypted backup is on.'); }
+    } catch(e){ store.del(BK_KEY); toast(e.message, true); }
+    route();
+  });
+  on('bkNow', async () => { try { await backupNow(); toast('Backed up.'); } catch(e){ toast(e.message, true); } rerender(); });
+  on('bkRestore', async () => {
+    if (!confirm("Replace this phone's shop and settings with the cloud backup?")) return;
+    try { const when = await restoreNow(); route(); toast(`Restored backup from ${new Date(when).toLocaleString('en-ZA')}.`); }
+    catch(e){ toast(e.message, true); }
+  });
+  on('bkOff', async () => {
+    if (!confirm('Turn off cloud backup on this phone? The encrypted file stays in your repo.')) return;
+    await disconnectBackup(); rerender(); toast('Cloud backup turned off.');
+  });
+}
+
 /* ---------------- router & chrome ---------------- */
 function route(){
   teardownMap();
@@ -581,7 +635,7 @@ function markNav(){
   const h = location.hash || '#/', cur = h.startsWith('#/shop') ? 'navShop' : h === '#/settings' ? 'navSettings' : 'navHome';
   ['navHome','navShop','navSettings'].forEach(id => $(id).toggleAttribute('aria-current', id === cur));
 }
-function setSyncBtn(busy){ const b = $('navSync'); b.disabled = busy; b.textContent = busy ? 'Syncing…' : 'Sync'; }
+function setSyncBtn(busy){ const b = $('navSync'); b.disabled = busy; b.classList.toggle('spin', busy); b.setAttribute('aria-label', busy ? 'Syncing' : 'Sync from Strava'); }
 let toastTimer;
 function toast(msg, err = false){
   const el = $('toast'); el.textContent = msg; el.className = 'toast on' + (err ? ' err' : '');
@@ -590,7 +644,7 @@ function toast(msg, err = false){
 $('navHome').onclick = () => { location.hash = '#/'; };
 $('navSettings').onclick = () => { location.hash = '#/settings'; };
 $('navShop').onclick = () => { location.hash = '#/shop'; };
-$('navSync').onclick = () => sync();
+$('navSync').onclick = () => { if (!syncing && confirm('Sync your latest workouts from Strava?')) sync(); };
 window.addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
 
 applyTheme();

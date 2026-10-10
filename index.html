@@ -166,31 +166,52 @@ function num(x){
   return Number.isFinite(n) ? n : null;
 }
 function isoDay(x){ const m = String(x||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[1]}-${m[2]}-${m[3]}` : null; }
+/* Accepts the custom ISO format plus Shortcuts' locale defaults, e.g.
+   "2026-10-10T08:15:30", "2026/10/10, 08:15", "10/10/2026 at 8:15 PM", "10 Oct 2026 at 08:15" (day-first assumed) */
+const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
 function isoTime(x){
-  const m = String(x||'').match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
-  return m ? `${m[1]}T${m[2]}:${m[3]}:${m[4]||'00'}` : null;
+  const s = String(x||'').replace(/ | /g,' ');
+  let y, mo, d, m;
+  if ((m = s.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))) [y,mo,d] = [m[1],m[2],m[3]];
+  else if ((m = s.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/))) [d,mo,y] = [m[1],m[2],m[3]];
+  else if ((m = s.match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?,?\s+(\d{4})/)) && MONTHS[m[2].toLowerCase()]) [d,mo,y] = [m[1],MONTHS[m[2].toLowerCase()],m[3]];
+  else if ((m = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/)) && MONTHS[m[1].toLowerCase()]) [mo,d,y] = [MONTHS[m[1].toLowerCase()],m[2],m[3]];
+  else return null;
+  const rest = s.slice(s.indexOf(m[0]) + m[0].length);
+  const t = rest.match(/(\d{1,2})[:h](\d{2})(?::(\d{2}))?\s*([AaPp])?/);
+  if (!t) return null;
+  let hh = +t[1];
+  if (t[4]){ const pm = /p/i.test(t[4]); if (hh === 12) hh = pm ? 12 : 0; else if (pm) hh += 12; }
+  const p2 = n => String(n).padStart(2,'0');
+  if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31 || hh > 23) return null;
+  return `${y}-${p2(mo)}-${p2(d)}T${p2(hh)}:${t[2]}:${t[3]||'00'}`;
 }
 function parse(text){
-  const out = { days:{}, hr:{}, ok:0, bad:0, hrCount:0 };
+  const out = { days:{}, hr:{}, ok:0, bad:0, hrCount:0, badLines:[] };
+  const skip = l => { out.bad++; if (out.badLines.length < 5) out.badLines.push(l); };
   for (const raw of String(text).split(/\r?\n/)){
     const line = raw.trim(); if (!line) continue;
     const p = line.split('|').map(s => s.trim());
     if (p[0] === 'D' && METRICS.has(p[1])){
       const d = isoDay(p[2]), v = num(p[3]);
-      if (!d || v == null){ out.bad++; continue; }
+      if (!d || v == null){ skip(line); continue; }
       out.days[d] = out.days[d] || {};
       out.days[d][p[1]] = p[1] === 'rhr' ? v : Math.max(out.days[d][p[1]] || 0, v);
       out.ok++;
     } else if (p[0] === 'H'){
       const t = isoTime(p[1]), v = num(p[2]);
-      if (!t || v == null || v < 25 || v > 240){ out.bad++; continue; }   // reject sensor junk
+      if (!t || v == null || v < 25 || v > 240){ skip(line); continue; }   // reject sensor junk
       out.hr[t] = v; out.ok++; out.hrCount++;
-    } else out.bad++;
+    } else skip(line);
   }
   return out;
 }
 function ingest(text){
   const p = parse(text);
+  if (p.bad){   // surface the first skipped lines so the Shortcut format can be fixed
+    $('raw').value = 'First skipped lines:\n' + p.badLines.join('\n');
+    document.querySelector('details').open = true;
+  }
   if (!p.ok){ toast('No valid records found. Check the Shortcut output.', true); return; }
   for (const [d, vals] of Object.entries(p.days)) state.days[d] = { ...(state.days[d]||{}), ...vals };
   Object.assign(state.hr, p.hr);

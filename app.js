@@ -309,8 +309,8 @@ function viewHome(){
 
   const L = getLedger(), wk = L.weeks[Scoring.weekKey(new Date())] || { total: 0, n: 0, mult: 1, streakIn: 0 };
   const streak = wk.streakIn ? `<span class="chip">${wk.streakIn}-week streak, +${Math.round((wk.mult-1)*100)}%</span>` : '';
-  html += `<div class="points"><span class="bal">${nf(L.total)}</span><span class="unit">points</span></div>
-    <div class="pointsub"><span>This week <b>+${nf(wk.total)}</b></span><span>${wk.n >= 3 ? `Streak secured, <b>${wk.n}</b> workouts` : `<b>${wk.n}</b> of 3 workouts for the streak`}</span>${streak}</div>`;
+  html += `<div class="points"><span class="bal">${nf(balance())}</span><span class="unit">points</span></div>
+    <div class="pointsub"><span>This week <b>+${nf(wk.total)}</b></span><span>${wk.n >= 3 ? `Streak secured, <b>${wk.n}</b> workouts` : `<b>${wk.n}</b> of 3 workouts for the streak`}</span>${streak}</div>` + goalCardHtml();
 
   const now = new Date(), monday = new Date(now); monday.setHours(0,0,0,0); monday.setDate(monday.getDate() - (monday.getDay()+6)%7);
   const month = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -497,6 +497,9 @@ function viewSettings(){
   html += `<h2>Data</h2>
     <p class="hint">${Object.keys(store.get(K.acts, {})).length} workouts stored on this phone.</p>
     <button class="btn" id="resync">Re-sync last 12 months</button>
+    <button class="btn" id="exportBk">Export backup</button>
+    <button class="btn" id="importBk">Import backup</button><input type="file" id="bkFile" accept="application/json,.json" hidden>
+    <p class="hint">The backup holds your shop, redemptions, scoring settings and appearance. Workouts aren't included; they re-sync from Strava.</p>
     <button class="btn danger" id="wipe">Delete all data on this phone</button>`;
   return html;
 }
@@ -526,8 +529,26 @@ function bindSettings(){
   on('resync', () => { const m = store.get(K.meta, {}); delete m.latest; store.set(K.meta, m); sync(); });
   on('wipe', async () => {
     if (!confirm('Delete all workouts, tokens and settings from this phone?')) return;
-    Object.values(K).forEach(store.del); await idb.clear(); invalidate(); applyTheme(); route(); toast('All data deleted.');
+    Object.values(K).forEach(store.del); store.del(SHOP_KEY); await idb.clear(); invalidate(); applyTheme(); route(); toast('All data deleted.');
   });
+  on('exportBk', () => {
+    const { clientSecret, ...safeCfg } = cfg();
+    const blob = new Blob([JSON.stringify({ app: 'vitamin-me', version: 1, exported: new Date().toISOString(), cfg: safeCfg, shop: shop() }, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `vitamin-me-backup-${Scoring.dayKey(new Date())}.json`; a.click();
+  });
+  on('importBk', () => $('bkFile').click());
+  const bf = $('bkFile'); if (bf) bf.onchange = async () => {
+    const f = bf.files[0]; if (!f) return;
+    try {
+      const b = JSON.parse(await f.text());
+      if (b.app !== 'vitamin-me' || !b.shop) throw new Error('This is not a Vitamin Me backup.');
+      if (!confirm(`Restore the shop (${b.shop.items.length} rewards, ${b.shop.redemptions.length} redemptions) and settings from ${new Date(b.exported).toLocaleDateString('en-ZA')}?`)) return;
+      setShop(b.shop);
+      const keep = cfg(); setCfg({ ...b.cfg, clientId: keep.clientId || b.cfg.clientId, clientSecret: keep.clientSecret });
+      applyTheme(); await rescoreAll(); invalidate(); route(); toast('Backup restored.');
+    } catch(e){ toast('Import failed: ' + e.message, true); }
+  };
   const g = $('goal'); if (g) g.onchange = () => { const v = parseFloat(g.value); if (v > 0){ setCfg({ weeklyKm: v }); toast('Goal saved.'); } };
 
   document.querySelectorAll('[data-param]').forEach(inp => inp.onchange = async () => {
@@ -552,7 +573,13 @@ function route(){
   const h = location.hash || '#/';
   if (h.startsWith('#/a/')) viewDetail(h.slice(4));
   else if (h === '#/settings'){ $('view').innerHTML = viewSettings(); bindSettings(); }
+  else if (h.startsWith('#/shop') && routeShop(h)){}
   else $('view').innerHTML = viewHome();
+  markNav();
+}
+function markNav(){
+  const h = location.hash || '#/', cur = h.startsWith('#/shop') ? 'navShop' : h === '#/settings' ? 'navSettings' : 'navHome';
+  ['navHome','navShop','navSettings'].forEach(id => $(id).toggleAttribute('aria-current', id === cur));
 }
 function setSyncBtn(busy){ const b = $('navSync'); b.disabled = busy; b.textContent = busy ? 'Syncing…' : 'Sync'; }
 let toastTimer;
@@ -562,6 +589,7 @@ function toast(msg, err = false){
 }
 $('navHome').onclick = () => { location.hash = '#/'; };
 $('navSettings').onclick = () => { location.hash = '#/settings'; };
+$('navShop').onclick = () => { location.hash = '#/shop'; };
 $('navSync').onclick = () => sync();
 window.addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
 

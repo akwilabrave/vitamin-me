@@ -1,8 +1,8 @@
 /* ================================================================
    Vitamin Me — personal records and vitamin collection (pure functions)
    Input:  activities (with Strava best efforts), the scoring ledger, params.
-   Output: current records, PR bonus events, vitamins with unlock date or progress,
-           and vitamin bonus events. Everything is re-derived from history, so
+   Output: current records, PR bonus events, vitamins (counts, progress) and a
+           chronological collection log. Vitamins are achievements: they never affect points. Everything is re-derived from history, so
            editing parameters re-evaluates records and unlocks consistently.
    Loaded in the browser as globalThis.Records; requireable in Node for tests.
    ================================================================ */
@@ -20,21 +20,21 @@
      once     → a milestone that can only be collected one time */
   const fl = (x, k) => Math.floor(x / k + 1e-9);
   const VITAMINS = [
-    { id: 'A',   sym: 'A',   name: 'Vitamin A',   desc: 'Every new personal record', noPts: true,             n: s => s.prs,               next: () => null, unit: '' },
-    { id: 'B1',  sym: 'B1',  name: 'Vitamin B1',  desc: 'Every 10 workouts',                                 n: s => fl(s.workouts, 10),  next: s => [s.workouts % 10, 10], unit: 'workouts' },
-    { id: 'B6',  sym: 'B6',  name: 'Vitamin B6',  desc: 'Complete 50 workouts', once: true,                  n: s => +(s.workouts >= 50), next: s => [Math.min(s.workouts, 50), 50], unit: 'workouts' },
-    { id: 'B12', sym: 'B12', name: 'Vitamin B12', desc: 'Complete 100 workouts', once: true,                 n: s => +(s.workouts >= 100),next: s => [Math.min(s.workouts, 100), 100], unit: 'workouts' },
-    { id: 'C',   sym: 'C',   name: 'Vitamin C',   desc: 'Every 4 weeks of streak (3+ workouts a week)',      n: s => s.streak4,           next: s => [s.curStreak % 4, 4], unit: 'weeks' },
-    { id: 'D',   sym: 'D',   name: 'Vitamin D',   desc: 'Every run of 10 km or more',                        n: s => s.runs10,            next: s => s.runs10 ? null : [s.longestKm, 10], unit: 'km' },
-    { id: 'D3',  sym: 'D3',  name: 'Vitamin D3',  desc: 'Every half marathon (21.1 km)',                     n: s => s.runsHalf,          next: s => s.runsHalf ? null : [s.longestKm, 21.1], unit: 'km' },
-    { id: 'E',   sym: 'E',   name: 'Vitamin E',   desc: 'Every 60-minute effort block',                      n: s => s.blocks60,          next: s => s.blocks60 ? null : [s.longestBlock, 60], unit: 'min' },
-    { id: 'K',   sym: 'K',   name: 'Vitamin K',   desc: 'Every 100 km of running',                           n: s => fl(s.runKm, 100),    next: s => [s.runKm % 100, 100], unit: 'km' },
-    { id: 'K2',  sym: 'K2',  name: 'Vitamin K2',  desc: 'Run 500 km in total', once: true,                   n: s => +(s.runKm >= 500),   next: s => [Math.min(s.runKm, 500), 500], unit: 'km' },
-    { id: 'Fe',  sym: 'Fe',  name: 'Iron',        desc: 'Every workout with 30+ vigorous minutes',           n: s => s.vig30,             next: s => s.vig30 ? null : [s.maxVig, 30], unit: 'min' },
-    { id: 'Zn',  sym: 'Zn',  name: 'Zinc',        desc: 'Every week with 150+ minutes in your effort zone',  n: s => s.weeks150,          next: s => s.zoneThisWeek >= 150 ? null : [s.zoneThisWeek, 150], unit: 'min this week' },
-    { id: 'Mg',  sym: 'Mg',  name: 'Magnesium',   desc: 'Every 10 workouts started before 07:00',            n: s => fl(s.mornings, 10),  next: s => [s.mornings % 10, 10], unit: 'early workouts' },
-    { id: 'Ca',  sym: 'Ca',  name: 'Calcium',     desc: 'Every 1,000 m climbed',                             n: s => fl(s.climb, 1000),   next: s => [s.climb % 1000, 1000], unit: 'm' },
-    { id: 'O3',  sym: 'Ω3',  name: 'Omega-3',     desc: 'Every 5 rest-day bonuses',                          n: s => fl(s.rests, 5),      next: s => [s.rests % 5, 5], unit: 'rest days' },
+    { id: 'A', color: '#df4985',   sym: 'A',   name: 'Vitamin A',   desc: 'Every new personal record',             n: s => s.prs,               next: () => null, unit: '' },
+    { id: 'B1', color: '#8e62da',  sym: 'B1',  name: 'Vitamin B1',  desc: 'Every 10 workouts',                                 n: s => fl(s.workouts, 10),  next: s => [s.workouts % 10, 10], unit: 'workouts' },
+    { id: 'B6', color: '#b159cf',  sym: 'B6',  name: 'Vitamin B6',  desc: 'Complete 50 workouts', once: true,                  n: s => +(s.workouts >= 50), next: s => [Math.min(s.workouts, 50), 50], unit: 'workouts' },
+    { id: 'B12', color: '#cd51b8', sym: 'B12', name: 'Vitamin B12', desc: 'Complete 100 workouts', once: true,                 n: s => +(s.workouts >= 100),next: s => [Math.min(s.workouts, 100), 100], unit: 'workouts' },
+    { id: 'C', color: '#ee7f2b',   sym: 'C',   name: 'Vitamin C',   desc: 'Every 4 weeks of streak (3+ workouts a week)',      n: s => s.streak4,           next: s => [s.curStreak % 4, 4], unit: 'weeks' },
+    { id: 'D', color: '#f3bf16',   sym: 'D',   name: 'Vitamin D',   desc: 'Every run of 10 km or more',                        n: s => s.runs10,            next: s => s.runs10 ? null : [s.longestKm, 10], unit: 'km' },
+    { id: 'D3', color: '#b5cc24',  sym: 'D3',  name: 'Vitamin D3',  desc: 'Every half marathon (21.1 km)',                     n: s => s.runsHalf,          next: s => s.runsHalf ? null : [s.longestKm, 21.1], unit: 'km' },
+    { id: 'E', color: '#6dba36',   sym: 'E',   name: 'Vitamin E',   desc: 'Every 60-minute effort block',                      n: s => s.blocks60,          next: s => s.blocks60 ? null : [s.longestBlock, 60], unit: 'min' },
+    { id: 'K', color: '#39ac43',   sym: 'K',   name: 'Vitamin K',   desc: 'Every 100 km of running',                           n: s => fl(s.runKm, 100),    next: s => [s.runKm % 100, 100], unit: 'km' },
+    { id: 'K2', color: '#2e9e66',  sym: 'K2',  name: 'Vitamin K2',  desc: 'Run 500 km in total', once: true,                   n: s => +(s.runKm >= 500),   next: s => [Math.min(s.runKm, 500), 500], unit: 'km' },
+    { id: 'Fe', color: '#e03e3e',  sym: 'Fe',  name: 'Iron',        desc: 'Every workout with 30+ vigorous minutes',           n: s => s.vig30,             next: s => s.vig30 ? null : [s.maxVig, 30], unit: 'min' },
+    { id: 'Zn', color: '#6266da',  sym: 'Zn',  name: 'Zinc',        desc: 'Every week with 150+ minutes in your effort zone',  n: s => s.weeks150,          next: s => s.zoneThisWeek >= 150 ? null : [s.zoneThisWeek, 150], unit: 'min this week' },
+    { id: 'Mg', color: '#29a393',  sym: 'Mg',  name: 'Magnesium',   desc: 'Every 10 workouts started before 07:00',            n: s => fl(s.mornings, 10),  next: s => [s.mornings % 10, 10], unit: 'early workouts' },
+    { id: 'Ca', color: '#25a5d0',  sym: 'Ca',  name: 'Calcium',     desc: 'Every 1,000 m climbed',                             n: s => fl(s.climb, 1000),   next: s => [s.climb % 1000, 1000], unit: 'm' },
+    { id: 'O3', color: '#3b81e3',  sym: 'Ω3',  name: 'Omega-3',     desc: 'Every 5 rest-day bonuses',                          n: s => fl(s.rests, 5),      next: s => [s.rests % 5, 5], unit: 'rest days' },
   ];
 
   function compute(acts, L, params, today = new Date()) {
@@ -44,7 +44,7 @@
 
     const best = {};                // effort key → { t, actId, date, prev }
     let longest = null;             // { km, actId, date, prev }
-    const prEvents = [], got = {}, vitaminEvents = [];
+    const prEvents = [], got = {}, log = [];
     const weekCount = {}, weekZone = {}, weekKm = {};
     const st = { prs: 0, workouts: 0, bestStreak: 0, curStreak: 0, streak4: 0, longestKm: 0, longestBlock: 0, runKm: 0, maxVig: 0,
                  runs10: 0, runsHalf: 0, blocks60: 0, vig30: 0, weeks150: 0, zoneThisWeek: 0, mornings: 0, climb: 0, rests: 0 };
@@ -55,7 +55,7 @@
         const list = got[v.id] ||= [];
         for (let n = v.n(st); list.length < n; ) {
           list.push({ date, actId });
-          if (p.vitaminPts && !v.noPts) vitaminEvents.push({ date, actId, vitamin: v.id, pts: p.vitaminPts });
+          log.push({ id: v.id, n: list.length, date, actId });     // chronological collection log (fills the jar)
         }
       }
     };
@@ -123,22 +123,19 @@
 
     const vitamins = VITAMINS.map(v => {
       const list = got[v.id] || [], nx = v.once && list.length ? null : v.next(st);
-      return { id: v.id, sym: v.sym, name: v.name, desc: v.desc, once: !!v.once, unit: v.unit,
+      return { id: v.id, sym: v.sym, name: v.name, desc: v.desc, color: v.color, once: !!v.once, unit: v.unit,
                count: list.length, first: list[0] || null, last: list[list.length - 1] || null,
                next: nx ? { value: nx[0], target: nx[1] } : null };
     });
-    return { records, prEvents, vitamins, vitaminEvents };
+    return { records, prEvents, vitamins, log };
   }
 
-  /* Fold PR and vitamin bonuses into a ledger (mutates and returns it). */
+  /* Fold record bonuses into a ledger (mutates and returns it). Vitamins are achievements and never score. */
   function mergeIntoLedger(L, R) {
     for (const e of R.prEvents) {
       const r = L.byAct[e.actId];
       if (r){ (r.prs ||= []).push(e); r.total += e.pts; }
       L.events.push(e);
-    }
-    for (const e of R.vitaminEvents) L.events.push({ date: e.date, actId: e.actId, vitamin: e.vitamin, pts: e.pts });
-    for (const e of [...R.prEvents, ...R.vitaminEvents]) {
       const w = L.weeks[S.weekKey(e.date)]; if (w) w.total += e.pts;
       L.total += e.pts;
     }

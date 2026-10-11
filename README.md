@@ -15,7 +15,8 @@ Personal fitness app (installable web app) for iPhone.
 | `index.html` | Page shell and styles (themes) |
 | `app.js` | Strava OAuth + sync, views, maps (Leaflet + OpenStreetMap), HR chart, splits, settings, backup |
 | `scoring.js` | Pure points engine (effort blocks, distance, consistency, streaks) |
-| `records.js` | Personal records and vitamin collection (pure functions) |
+| `records.js` | Personal records and vitamin collection (pure functions; vitamins never affect points) |
+| `jar.js` | Vitamin jar and collection celebration |
 | `shop.js` | Reward shop |
 | `sw.js` | Offline app-shell cache. Bump `VERSION` on every deploy. |
 | `manifest.json`, `icon-*.png` | Home-screen install metadata |

@@ -249,7 +249,7 @@ async function sync(){
     msg ??= (added ? `Synced ${added} new workout${added > 1 ? 's' : ''}.` : 'Up to date.') +
             (pending ? ` ${pending} older workout${pending > 1 ? 's' : ''} still to score on the next sync.` : '');
   } catch(e){ msg = e.message; err = true; }
-  finally { syncing = false; setSyncBtn(false); invalidate(); route(); if (msg) toast(msg, err); }
+  finally { syncing = false; setSyncBtn(false); invalidate(); route(); if (msg) toast(msg, err); celebrate(); }
 }
 
 /* ---------------- formatting ---------------- */
@@ -316,8 +316,8 @@ function viewHome(){
 
   const L = getLedger(), wk = L.weeks[Scoring.weekKey(new Date())] || { total: 0, n: 0, mult: 1, streakIn: 0 };
   const streak = wk.streakIn ? `<span class="chip">${wk.streakIn}-week streak, +${Math.round((wk.mult-1)*100)}%</span>` : '';
-  html += `<div class="points"><span class="bal">${nf(balance())}</span><span class="unit">points</span></div>
-    <div class="pointsub"><span>This week <b>+${nf(wk.total)}</b></span><span>${wk.n >= 3 ? `Streak secured, <b>${wk.n}</b> workouts` : `<b>${wk.n}</b> of 3 workouts for the streak`}</span>${streak}</div>` + goalCardHtml() + backupBannerHtml();
+  html += `<div class="hero"><div class="herol"><div class="points"><span class="bal">${nf(balance())}</span><span class="unit">points</span></div>
+    <div class="pointsub"><span>This week <b>+${nf(wk.total)}</b></span><span>${wk.n >= 3 ? `Streak secured, <b>${wk.n}</b> workouts` : `<b>${wk.n}</b> of 3 workouts for the streak`}</span>${streak}</div></div>${jarButtonHtml()}</div>` + goalCardHtml() + backupBannerHtml();
 
   const now = new Date(), monday = new Date(now); monday.setHours(0,0,0,0); monday.setDate(monday.getDate() - (monday.getDay()+6)%7);
   const month = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -463,22 +463,50 @@ function recordValue(r){
   if (r.kind === 'km') return `${nf(r.value, r.key === 'week' ? 1 : 2)} km`;
   return `${r.value} week${r.value === 1 ? '' : 's'}`;
 }
+/* Big capsule for a vitamin tile: left half its own colour, right half the accent. Locked: outlined, fills with progress. */
 function capsuleSvg(v){
   const done = v.count > 0, pct = done ? 100 : v.next ? Math.max(0, Math.min(100, v.next.value / v.next.target * 100)) : 0;
-  return `<svg class="cap ${done ? 'on' : ''}" viewBox="0 0 120 52" role="img" aria-label="${esc(v.name)}${done ? ', collected' : `, ${Math.round(pct)}% progress`}">
-    <defs><clipPath id="cp-${v.id}"><rect x="2" y="2" width="116" height="48" rx="24"/></clipPath></defs>
-    ${done ? `<rect x="2" y="2" width="58" height="48" fill="var(--accent)" clip-path="url(#cp-${v.id})"/><rect x="60" y="2" width="58" height="48" fill="var(--accent2)" clip-path="url(#cp-${v.id})"/>
-              <rect x="10" y="9" width="40" height="7" rx="3.5" fill="#fff" opacity=".35"/>`
-           : `<rect x="2" y="2" width="${(116 * pct / 100).toFixed(1)}" height="48" fill="var(--accent)" opacity=".22" clip-path="url(#cp-${v.id})"/>`}
-    <rect x="2" y="2" width="116" height="48" rx="24" fill="none" stroke="${done ? 'none' : 'var(--line)'}" stroke-width="2"/>
-    <text x="60" y="34" text-anchor="middle" class="capsym">${esc(v.sym)}</text></svg>${v.count > 1 ? `<span class="badge">×${v.count}</span>` : ''}`;
+  const cp = `cp-${v.id}-${Math.random().toString(36).slice(2, 6)}`;
+  const label = `${esc(v.name)}${done ? `, collected ${v.count} time${v.count > 1 ? 's' : ''}` : `, ${Math.round(pct)}% of the way`}`;
+  return `<svg class="cap ${done ? 'on' : ''}" viewBox="0 0 120 52" role="img" aria-label="${label}">
+    <defs><clipPath id="${cp}"><rect x="2" y="2" width="116" height="48" rx="24"/></clipPath></defs>
+    ${done ? `<rect x="2" y="2" width="58" height="48" fill="${v.color}" clip-path="url(#${cp})"/>
+              <rect x="60" y="2" width="58" height="48" fill="var(--accent)" clip-path="url(#${cp})"/>
+              <line x1="60" y1="2" x2="60" y2="50" stroke="#000" stroke-opacity=".12" stroke-width="1.5"/>
+              <rect x="12" y="9" width="36" height="7" rx="3.5" fill="#fff" opacity=".4"/>
+              <rect x="70" y="9" width="36" height="7" rx="3.5" fill="#fff" opacity=".3"/>
+              <text x="31" y="34" text-anchor="middle" class="capsym" style="fill:${inkFor(v.color)}">${esc(v.sym)}</text>`
+           : `<rect x="2" y="2" width="${(116 * pct / 100).toFixed(1)}" height="48" fill="${v.color}" opacity=".28" clip-path="url(#${cp})"/>
+              <rect x="2" y="2" width="116" height="48" rx="24" fill="none" stroke="${v.color}" stroke-opacity=".55" stroke-width="2" stroke-dasharray="5 4"/>
+              <text x="60" y="34" text-anchor="middle" class="capsym locked">${esc(v.sym)}</text>`}
+    </svg>${v.count > 1 ? `<span class="badge" style="background:${v.color};color:${inkFor(v.color)}">×${v.count}</span>` : ''}`;
 }
 function viewProgress(){
   const R = getLedger().rec;
   if (!R || !Object.keys(store.get(K.acts, {})).length)
     return `<h1 class="brand">Progress</h1><div class="empty">Sync your workouts first. Records and vitamins are worked out from your history.</div>`;
-  const types = R.vitamins.filter(v => v.count).length, total = R.vitamins.reduce((s, v) => s + v.count, 0);
-  let html = `<h1 class="brand">Progress</h1><h2>Records</h2>`;
+  const types = R.vitamins.filter(v => v.count).length, total = R.log.length;
+  const latest = R.log[R.log.length - 1], lv = latest && R.vitamins.find(v => v.id === latest.id);
+  let html = `<h1 class="brand">Progress</h1>
+    <div class="jarhero">${jarSvg(R.log, { cls: 'big' })}
+      <div><div class="jarcount num">${nf(total)}</div><div class="lbl">vitamin${total === 1 ? '' : 's'} in your jar</div>
+        <div class="lbl">${types} of ${R.vitamins.length} kinds found</div>
+        ${lv ? `<div class="lbl jarlast"><i style="background:${lv.color}"></i>Latest: ${esc(lv.name)}, ${shortDate(latest.date)}</div>` : ''}</div></div>`;
+
+  const nextTxt = v => v.next ? `${nf(v.next.value, v.unit === 'km' ? 1 : 0)} of ${nf(v.next.target, v.next.target % 1 ? 1 : 0)} ${v.unit}` : '';
+  const order = [...R.vitamins].sort((a, b) => (b.count > 0) - (a.count > 0));   // collected first, original order kept within groups
+  html += `<h2>Vitamins</h2><div class="vits">` +
+    order.map(v => {
+      const status = v.count ? (v.count === 1 ? `Collected ${shortDate(v.last.date)}` : `Last collected ${shortDate(v.last.date)}`) : '';
+      const next = v.once && v.count ? 'Milestone reached' : v.next ? (v.count ? `Next: ${nextTxt(v)}` : nextTxt(v)) : (v.count ? '' : 'Not collected yet');
+      return `<div class="vit ${v.count ? 'on' : ''}" style="--vc:${v.color}"><div class="capwrap">${capsuleSvg(v)}</div>
+        <div class="t">${esc(v.name)}${v.once ? ' <span class="chip">Once</span>' : ''}</div><div class="m">${esc(v.desc)}</div>
+        ${status ? `<div class="m s">${status}</div>` : ''}${next ? `<div class="m">${next}</div>` : ''}
+        ${!v.count && v.next ? `<div class="vbar"><i style="width:${Math.min(100, v.next.value / v.next.target * 100).toFixed(0)}%"></i></div>` : ''}</div>`;
+    }).join('') + `</div>
+    <p class="hint">Vitamins are achievements. They don't add points; they're your collection.</p>`;
+
+  html += `<h2>Records</h2>`;
   html += R.records.length ? `<div class="recs">` + R.records.map(r => {
     const tag = r.actId ? 'a' : 'div', href = r.actId ? ` href="#/a/${r.actId}"` : '';
     const sub = r.kind === 'time' && r.prev ? `${shortDate(r.date)}, ${dur(r.prev - r.t)} faster than before`
@@ -486,31 +514,8 @@ function viewProgress(){
               : r.date ? (r.key === 'week' ? `Week of ${shortDate(r.date)}` : shortDate(r.date)) : '3+ workouts every week';
     return `<${tag} class="rec"${href}><div><div class="t">${esc(r.label)}</div><div class="m">${sub}</div></div><div class="rv">${recordValue(r)}</div></${tag}>`;
   }).join('') + `</div>` : `<p class="hint">Records appear once you've synced runs.</p>`;
-  html += `<p class="hint">Beating a 1 km, 5 km, 10 km or half-marathon time earns +${getLedger().params.prPts}, a new longest run +${getLedger().params.longestPts}. Times are Strava's best efforts within your runs.</p>`;
-
-  const nextTxt = v => v.next ? `${nf(v.next.value, v.unit === 'km' ? 1 : 0)} of ${nf(v.next.target, v.next.target % 1 ? 1 : 0)} ${v.unit}` : '';
-  html += `<h2>Vitamins <span class="count">${total} collected, ${types} of ${R.vitamins.length} kinds</span></h2><div class="vits">` +
-    R.vitamins.map(v => {
-      const status = v.count ? (v.count === 1 ? `Collected ${shortDate(v.last.date)}` : `Collected ${v.count} times, last ${shortDate(v.last.date)}`) : '';
-      const next = v.once && v.count ? 'Milestone reached' : v.next ? (v.count ? `Next: ${nextTxt(v)}` : nextTxt(v)) : (v.count ? '' : 'Not collected yet');
-      return `<div class="vit ${v.count ? 'on' : ''}"><div class="capwrap">${capsuleSvg(v)}</div>
-        <div class="t">${esc(v.name)}${v.once ? ' <span class="chip">Once</span>' : ''}</div><div class="m">${esc(v.desc)}</div>
-        ${status ? `<div class="m s">${status}</div>` : ''}${next ? `<div class="m">${next}</div>` : ''}</div>`;
-    }).join('') + `</div>
-    <p class="hint">Every collection earns +${getLedger().params.vitaminPts} points, except Vitamin A, because records already earn their own bonus.</p>`;
+  html += `<p class="hint">Beating a 1 km, 5 km, 10 km or half-marathon time earns +${getLedger().params.prPts} points, a new longest run +${getLedger().params.longestPts}. Times are Strava's best efforts within your runs.</p>`;
   return html;
-}
-/* Toast newly collected vitamins once. On first run, history unlocks are summarised. */
-function announceVitamins(){
-  const R = getLedger().rec; if (!R) return;
-  const meta = store.get(K.meta, {});
-  const seen = Array.isArray(meta.seenVit) ? Object.fromEntries(meta.seenVit.map(id => [id, 1])) : (meta.seenVit || {});
-  const fresh = R.vitamins.filter(v => v.count > (seen[v.id] || 0));
-  if (!fresh.length) return;
-  const n = fresh.reduce((s, v) => s + v.count - (seen[v.id] || 0), 0);
-  store.set(K.meta, { ...meta, seenVit: Object.fromEntries(R.vitamins.map(v => [v.id, v.count])) });
-  setTimeout(() => toast(n === 1 ? `Vitamin collected: ${fresh[0].name}${fresh[0].count > 1 ? ` (×${fresh[0].count})` : ''}. ${fresh[0].desc}.`
-                                 : `You've collected ${n} vitamins. See them under Progress.`), 3200);
 }
 
 /* ---------------- settings ---------------- */
@@ -684,7 +689,7 @@ function route(){
   else if (h === '#/settings'){ $('view').innerHTML = viewSettings(); bindSettings(); }
   else if (h.startsWith('#/shop') && routeShop(h)){}
   else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); }
-  else { $('view').innerHTML = viewHome(); announceVitamins(); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
+  else { $('view').innerHTML = viewHome(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
   markNav();
 }
 function markNav(){

@@ -60,6 +60,19 @@
   .jarhero .lbl{color:var(--muted);font-size:14px}
   .jarlast{margin-top:10px;display:flex;align-items:center;gap:6px}
   .jarlast i,.vchip i{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+  #tmap{height:58vh;min-height:320px;border-radius:18px;margin:14px 0 10px;background:var(--panel);overflow:hidden}
+  .tview{margin-bottom:6px}
+  .ttip{background:var(--panel);color:var(--text);border:1px solid var(--line);font-weight:650;box-shadow:none}
+  .ttip::before{display:none}
+  .tview button{font-size:13px}
+  .stats:has(> :nth-child(4):last-child){grid-template-columns:repeat(2,1fr)}
+  .terrcard{display:block;text-decoration:none;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+  .tstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .tstats .v{font-size:24px}
+  .tstats .k{color:var(--muted);font-size:12px}
+  .terrcard .btn{text-align:center;margin-top:12px}
+  .replay{margin-top:12px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600}
+  .replay svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   .vbar{height:4px;border-radius:2px;background:var(--line);margin-top:6px;overflow:hidden;max-width:150px}
   .vbar i{display:block;height:100%;background:var(--vc)}
   .vit .capsym.locked{fill:var(--vc);opacity:.75}
@@ -146,6 +159,12 @@
   .param input{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:7px 8px;text-align:right;font-variant-numeric:tabular-nums}
   .param input.changed{border-color:var(--accent)}
   .param span{color:var(--muted);font-size:13px}
+  .slist{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:14px 0}
+  .srow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;text-decoration:none;border-bottom:1px solid var(--line)}
+  .srow:last-child{border-bottom:0}
+  .srow .t{display:block;font-weight:600}
+  .srow .m{display:block;color:var(--muted);font-size:13px}
+  .chev{width:20px;height:20px;flex:none;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .grp{color:var(--muted);font-size:14px;font-weight:600;margin:20px 0 2px}
   .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
   .seg button{flex:1;border:0;background:transparent;color:var(--muted);padding:8px;border-radius:9px;font-weight:600}
@@ -232,6 +251,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="scoring.js"></script>
+<script src="territory.js"></script>
 <script src="records.js"></script>
 <script src="jar.js"></script>
 <script src="shop.js"></script>

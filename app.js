@@ -7,7 +7,7 @@
    Scoring lives in scoring.js (pure functions).
    ================================================================ */
 
-const K = { cfg:'vm.cfg', tok:'vm.tok', acts:'vm.acts', meta:'vm.meta', fx:'vm.fx' };
+const K = { cfg:'vm.cfg', tok:'vm.tok', acts:'vm.acts', meta:'vm.meta', fx:'vm.fx', tiles:'vm.tiles' };
 const API = 'https://www.strava.com/api/v3';
 const FIRST_SYNC_DAYS = 365;
 const REQUEST_BUDGET = 40;            // detail/stream requests per sync (Strava allows 100 reads / 15 min)
@@ -156,7 +156,7 @@ async function detail(id){
           be: Object.fromEntries((a?.best_efforts || []).filter(e => keep.has(e.name)).map(e => [e.name, e.elapsed_time])) };
     await idb.set('d' + id, d);
     const acts = store.get(K.acts, {});
-    if (acts[id]){ acts[id].kcal = d.calories; acts[id].be = d.be; acts[id].beFetched = true; store.set(K.acts, acts); invalidate(); }
+    if (acts[id]){ acts[id].kcal = d.calories; acts[id].be = d.be; acts[id].beFetched = true; store.set(K.acts, acts); setTiles(acts[id], d); invalidate(); }
   }
   return d;
 }
@@ -196,6 +196,9 @@ function getLedger(){
   if (ledgerCache) return ledgerCache;
   const acts = Object.values(store.get(K.acts, {}));
   ledgerCache = Scoring.ledger(acts, fxGet() || {}, cfg().params || {});
+  const tiles = Object.fromEntries(Object.entries(store.get(K.tiles, {})).map(([id, t]) => [id, t.k]));
+  ledgerCache.terr = Territory.compute(acts, tiles, cfg().params || {});
+  Territory.mergeIntoLedger(ledgerCache, ledgerCache.terr);
   ledgerCache.rec = Records.compute(acts, ledgerCache, cfg().params || {});
   Records.mergeIntoLedger(ledgerCache, ledgerCache.rec);
   return ledgerCache;
@@ -206,7 +209,7 @@ const invalidate = () => { ledgerCache = null; };
 let syncing = false;
 async function sync(){
   if (syncing) return;
-  if (!store.get(K.tok, null)){ toast('Connect Strava in Settings first.', true); location.hash = '#/settings'; return; }
+  if (!store.get(K.tok, null)){ toast('Connect Strava in Settings first.', true); location.hash = '#/settings/strava'; return; }
   syncing = true; setSyncBtn(true);
   let msg = null, err = false;
   try {
@@ -297,7 +300,7 @@ function routeSvg(poly, size = 52){
 
 /* ---------------- views ---------------- */
 let map = null;
-function teardownMap(){ if (map){ map.remove(); map = null; } }
+function teardownMap(){ if (map){ map.remove(); map = null; } if (terrMap){ terrMap.remove(); terrMap = null; } }
 const sorted = () => Object.values(store.get(K.acts, {})).sort((x,y) => y.start.localeCompare(x.start));
 
 function viewHome(){
@@ -310,7 +313,7 @@ function viewHome(){
   if (!acts.length){
     html += tok
       ? `<div class="empty">No workouts yet.<button class="btn go" onclick="sync()">Sync from Strava</button></div>`
-      : `<div class="empty">Connect your Strava account to pull in your workouts.<button class="btn go" onclick="location.hash='#/settings'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
+      : `<div class="empty">Connect your Strava account to pull in your workouts.<button class="btn go" onclick="location.hash='#/settings/strava'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
     return html;
   }
 
@@ -357,7 +360,7 @@ async function viewDetail(id){
   if (s && !(fxGet() || {})[id]){ const fx = fxGet() || {}; fx[id] = computeFx(s); fxSet(fx); invalidate(); }
   if (location.hash !== '#/a/' + id) return;
   $('view').innerHTML = detailHtml(store.get(K.acts, {})[id], d, s);
-  drawMap(d?.poly || a.poly);
+  drawMap(d?.poly || a.poly, getLedger().terr.byAct[id]?.fresh);
 }
 
 function pointsHtml(a){
@@ -374,6 +377,7 @@ function pointsHtml(a){
   if (r.km >= 0.05) rows.push(['Distance', `${nf(r.km, 2)} km`, r.dist]);
   if (r.mult > 1){ const boost = Math.round((r.effort + r.dist) * r.mult) - (r.effort + r.dist); rows.push(['Streak boost', `+${Math.round((r.mult-1)*100)}%`, boost]); }
   if (r.bonus) rows.push(['Consistency', r.bonusLabel, r.bonus]);
+  if (r.explore) rows.push(['Exploration', `${r.explore.tiles} new territory tile${r.explore.tiles > 1 ? 's' : ''}`, r.explore.pts]);
   for (const e of r.prs || []) rows.push([e.label, e.t ? `${dur(e.t)}, beating ${dur(e.prev)} by ${dur(e.prev - e.t)}` : `${nf(e.km, 2)} km, beating ${nf(e.prevKm, 2)} km`, e.pts]);
   return `<h2>Points</h2><table class="ledger"><tbody>` +
     rows.map(([k, sub, v]) => `<tr><td>${k}<small>${sub}</small></td><td class="p">+${nf(v)}</td></tr>`).join('') +
@@ -443,12 +447,14 @@ function hrChart(t, hr, avg){
     <p class="hint">Shaded area: your effort zone (≥ ${Math.round(z.mod)} bpm), where points are earned. Dashed line: average.</p>`;
 }
 
-function drawMap(poly){
+function drawMap(poly, freshTiles){
   teardownMap();
   const el = $('map'); if (!poly || !el || typeof L === 'undefined') return;
   const pts = decodePoly(poly); if (pts.length < 2) return;
   map = L.map(el, { zoomControl: false, attributionControl: true });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+  if (freshTiles?.length){ const fc = css('--accent2');
+    for (const k of freshTiles) L.rectangle(Territory.bounds(k), { color: fc, weight: 1, opacity: .7, fillColor: fc, fillOpacity: .22, interactive: false }).addTo(map); }
   const line = L.polyline(pts, { color: css('--accent'), weight: 4, opacity: .95 }).addTo(map);
   const ring = css('--bg');
   L.circleMarker(pts[0], { radius: 6, color: ring, weight: 2, fillColor: css('--accent2'), fillOpacity: 1 }).addTo(map);
@@ -491,7 +497,8 @@ function viewProgress(){
     <div class="jarhero">${jarSvg(R.log, { cls: 'big' })}
       <div><div class="jarcount num">${nf(total)}</div><div class="lbl">vitamin${total === 1 ? '' : 's'} in your jar</div>
         <div class="lbl">${types} of ${R.vitamins.length} kinds found</div>
-        ${lv ? `<div class="lbl jarlast"><i style="background:${lv.color}"></i>Latest: ${esc(lv.name)}, ${shortDate(latest.date)}</div>` : ''}</div></div>`;
+        ${lv ? `<div class="lbl jarlast"><i style="background:${lv.color}"></i>Latest: ${esc(lv.name)}, ${shortDate(latest.date)}</div>` : ''}
+        <button class="replay" onclick="celebrate(3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg>Replay the drop</button></div></div>`;
 
   const nextTxt = v => v.next ? `${nf(v.next.value, v.unit === 'km' ? 1 : 0)} of ${nf(v.next.target, v.next.target % 1 ? 1 : 0)} ${v.unit}` : '';
   const order = [...R.vitamins].sort((a, b) => (b.count > 0) - (a.count > 0));   // collected first, original order kept within groups
@@ -506,6 +513,7 @@ function viewProgress(){
     }).join('') + `</div>
     <p class="hint">Vitamins are achievements. They don't add points; they're your collection.</p>`;
 
+  html += territoryCardHtml();
   html += `<h2>Records</h2>`;
   html += R.records.length ? `<div class="recs">` + R.records.map(r => {
     const tag = r.actId ? 'a' : 'div', href = r.actId ? ` href="#/a/${r.actId}"` : '';
@@ -519,72 +527,199 @@ function viewProgress(){
 }
 
 /* ---------------- settings ---------------- */
-function viewSettings(){
+/* ---------------- territory ----------------
+   Tiles per activity are cached in localStorage ({id: {k: [tile keys], full}}), computed from
+   the detailed route when available, otherwise from the summary polyline (upgraded later). */
+function setTiles(a, d){
+  const poly = d?.poly || a.poly; if (!poly) return false;
+  const all = store.get(K.tiles, {}), full = !!d?.poly;
+  if (all[a.id]?.full && !full) return false;
+  all[a.id] = { k: Territory.tilesFromPoints(decodePoly(poly)), full };
+  store.set(K.tiles, all); return true;
+}
+async function ensureTiles(){
+  const all = store.get(K.tiles, {}); let changed = false;
+  for (const a of Object.values(store.get(K.acts, {}))){
+    if (all[a.id]?.full || (!a.poly && all[a.id])) continue;
+    const d = await idb.get('d' + a.id);
+    if (d?.poly || (!all[a.id] && a.poly)) changed = setTiles(a, d) || changed;
+  }
+  return changed;
+}
+function territoryCardHtml(){
+  const T = getLedger().terr; if (!T) return '';
+  const wkStart = Scoring.weekKey(new Date());
+  const thisWeek = [...T.owned.values()].filter(o => Scoring.weekKey(o.date) >= wkStart).length;
+  return `<h2>Territory</h2><a class="terrcard" href="#/territory">
+      <div class="tstats"><div><div class="v num">${nf(T.count)}</div><div class="k">tiles claimed</div></div>
+        <div><div class="v num">${nf(thisWeek)}</div><div class="k">new this week</div></div>
+        <div><div class="v num">${T.square.size}×${T.square.size}</div><div class="k">biggest square</div></div></div>
+      <span class="btn go">Open territory map</span></a>`;
+}
+let terrMap = null;
+function viewTerritory(){
+  const T = getLedger().terr, p = getLedger().params;
+  const wkStart = Scoring.weekKey(new Date());
+  const thisWeek = [...T.owned.values()].filter(o => Scoring.weekKey(o.date) >= wkStart).length;
+  const here = T.area.length ? Territory.bounds(T.area[0])[0][0] : null;
+  return `${backTo('#/progress', 'Progress')}<h1 class="brand">Territory</h1>
+    <div id="tmap" class="${T.count ? '' : 'nomap'}">${T.count ? '' : 'Sync a workout with a GPS route to start claiming tiles.'}</div>
+    ${T.count ? `<div class="seg tview" role="group" aria-label="Map view">
+      <button data-tv="home" aria-pressed="true">Home area</button><button data-tv="all" aria-pressed="false">Everywhere</button><button data-tv="square" aria-pressed="false">Biggest square</button></div>` : ''}
+    <div class="stats">
+      <div><div class="v">${nf(T.count)}</div><div class="k">Tiles claimed</div></div>
+      <div><div class="v">${nf(thisWeek)}</div><div class="k">New this week</div></div>
+      <div><div class="v">${nf(T.area.length)}</div><div class="k">Largest area${T.areas.length > 1 ? `, of ${T.areas.length}` : ''}</div></div>
+      <div><div class="v">${T.square.size}×${T.square.size}</div><div class="k">Biggest square</div></div>
+    </div>
+    <p class="hint">The whole world is split into a grid of tiles${here !== null ? `, about ${Math.round(Territory.tileSizeM(here))} m across where you run` : ''}. Pass through a tile you've never visited to claim it: +${p.tilePts} points each, and every 100 tiles is a Vitamin B3. Repeating the same loop earns nothing new, so go explore.</p>
+    <p class="hint">Largest area is your biggest connected patch of tiles. Biggest square is the largest solid block with no gaps; fill in the holes to grow it.</p>`;
+}
+function drawTerritory(){
+  if (terrMap){ terrMap.remove(); terrMap = null; }
+  const T = getLedger().terr, el = $('tmap'); if (!T.count || !el || typeof L === 'undefined') return;
+  terrMap = L.map(el, { zoomControl: false, preferCanvas: true });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(terrMap);
+  const ac = css('--accent'), a2 = css('--accent2'), wkStart = Scoring.weekKey(new Date()), lastId = sorted()[0]?.id;
+  for (const [k, o] of T.owned){
+    const fresh = Scoring.weekKey(o.date) >= wkStart;
+    L.rectangle(Territory.bounds(k), { color: fresh ? a2 : ac, weight: .8, opacity: .55, fillColor: fresh ? a2 : ac, fillOpacity: fresh ? .45 : .28, interactive: false }).addTo(terrMap);
+  }
+  let sq = null;
+  if (T.square.size > 1){
+    const a = Territory.bounds(Territory.key(T.square.x0, T.square.y0 + T.square.size - 1)), b = Territory.bounds(Territory.key(T.square.x0 + T.square.size - 1, T.square.y0));
+    sq = L.latLngBounds(a[0], b[1]);
+    L.rectangle(sq, { color: css('--text'), weight: 2.5, fill: false, dashArray: '6 5', interactive: false }).addTo(terrMap);
+  }
+  // Zoomed out, tiles shrink to specks: show one marker per separate area instead.
+  const spots = L.layerGroup(T.areas.map(ar => {
+    const bb = L.latLngBounds(ar.flatMap(k => Territory.bounds(k)));
+    return L.circleMarker(bb.getCenter(), { radius: Math.min(26, 7 + Math.sqrt(ar.length) * 1.6), color: ac, weight: 2, fillColor: ac, fillOpacity: .35 })
+      .bindTooltip(`${ar.length} tile${ar.length > 1 ? 's' : ''}`, { permanent: true, direction: 'top', className: 'ttip', offset: [0, -8] })
+      .on('click', () => terrMap.fitBounds(bb, { padding: [16, 16] }));
+  }));
+  const zoomSwap = () => { if (terrMap.getZoom() < 11) spots.addTo(terrMap); else spots.remove(); };
+  terrMap.on('zoomend', zoomSwap);
+  const fit = which => {
+    const keys = which === 'all' ? [...T.owned.keys()] : T.area;
+    if (which === 'square' && sq) return terrMap.fitBounds(sq, { padding: [40, 40] });
+    const bb = L.latLngBounds(keys.flatMap(k => Territory.bounds(k)));
+    terrMap.fitBounds(bb, { padding: [16, 16] });
+  };
+  fit('home'); zoomSwap();
+  document.querySelectorAll('[data-tv]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('[data-tv]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    fit(b.dataset.tv);
+  });
+}
+
+/* Settings is a small tree: #/settings → section pages → (scoring) group pages. */
+const slug = g => g.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+const scoringGroups = () => [...new Set(Scoring.PARAMS.map(p => p[4]))];
+const changedIn = (group, p = params()) => Scoring.PARAMS.filter(x => (!group || x[4] === group) && p[x[0]] !== x[1]).length;
+const chevron = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const row = (href, title, sub) => `<a class="srow" href="${href}"><span><span class="t">${title}</span>${sub ? `<span class="m">${sub}</span>` : ''}</span>${chevron}</a>`;
+const backTo = (href, label) => `<button class="back" onclick="location.hash='${href}'">${label}</button>`;
+
+function viewSettings(path = ''){
   const c = cfg(), tok = store.get(K.tok, null), t = c.theme || {}, mode = t.mode || 'system', accent = (t.accent || '#ff8a1f').toLowerCase();
   const p = params();
-  let html = `<h1 class="brand">Settings</h1>`;
-  if (pendingCode){
-    html += `<h2>Finish connecting</h2>
-      <p class="hint">Strava sent you back to Safari instead of the app. Copy this code, open Vitamin Me from your home screen, and paste it under Settings.</p>
-      <div class="field"><input id="codeOut" readonly value="${esc(pendingCode)}"></div>
-      <button class="btn go" id="copyCode">Copy code</button>`;
+
+  if (path === ''){
+    const accName = (ACCENTS.find(a => a[1] === accent) || ['Custom colour'])[0];
+    const lastExp = store.get(K.meta, {}).lastExport, n = changedIn();
+    const ago = lastExp ? Math.floor((Date.now() - lastExp) / 86400000) : null;
+    let html = `<h1 class="brand">Settings</h1>`;
+    if (pendingCode) html += `<div class="slist">${row('#/settings/strava', 'Finish connecting Strava', 'A code from Safari is waiting')}</div>`;
+    html += `<div class="slist">
+      ${row('#/settings/appearance', 'Appearance', `${mode[0].toUpperCase() + mode.slice(1)} theme, ${accName.toLowerCase()} accent`)}
+      ${row('#/settings/strava', 'Strava', tok ? `Connected as ${esc(tok.athlete?.name || 'you')}` : 'Not connected')}
+      ${row('#/settings/goals', 'Goals', `${nf(c.weeklyKm || 20)} km of running a week`)}
+      ${row('#/settings/scoring', 'Scoring', n ? `${n} setting${n > 1 ? 's' : ''} changed from default` : 'Default settings')}
+      ${row('#/settings/data', 'Backup and data', ago === null ? 'No backup yet' : ago === 0 ? 'Backed up today' : `Last backup ${ago} day${ago > 1 ? 's' : ''} ago`)}
+    </div>`;
+    return html;
   }
 
-  html += `<h2>Appearance</h2>
+  if (path === '/appearance') return `${backTo('#/settings', 'Settings')}<h1 class="brand">Appearance</h1>
+    <h2>Theme</h2>
     <div class="seg" role="group" aria-label="Theme">
       ${[['system','System'],['light','Light'],['dark','Dark']].map(([k,l]) => `<button data-mode="${k}" aria-pressed="${mode === k}">${l}</button>`).join('')}
     </div>
+    <p class="hint">System follows your iPhone's light or dark mode.</p>
+    <h2>Accent colour</h2>
     <div class="swatches" role="group" aria-label="Accent colour">
       ${ACCENTS.map(([n,h]) => `<button class="sw" data-accent="${h}" style="background:${h}" aria-label="${n}" aria-pressed="${accent === h}"></button>`).join('')}
       <label class="sw custom" aria-label="Custom colour" aria-pressed="${!ACCENTS.some(a => a[1] === accent)}"><input type="color" id="customAccent" value="${esc(accent)}"></label>
-    </div>`;
+    </div>
+    <p class="hint">Used for points, buttons, routes, and one half of every vitamin capsule.</p>`;
 
-  html += `<h2>Strava</h2>`;
-  html += tok
-    ? `<p>Connected as <b>${esc(tok.athlete?.name || 'your account')}</b>.</p>
-       <button class="btn" id="disconnect">Disconnect Strava</button>`
-    : `<p class="hint">One-time setup. At <code>strava.com/settings/api</code>, create an application with Authorization Callback Domain <code>${esc(location.hostname)}</code>. Paste its Client ID and Client Secret here. They are stored only on this phone.</p>
-       <div class="field"><label for="cid">Client ID</label><input id="cid" inputmode="numeric" autocomplete="off" value="${esc(c.clientId || '')}"></div>
-       <div class="field"><label for="csec">Client Secret</label><input id="csec" type="password" autocomplete="off" value="${esc(c.clientSecret || '')}"></div>
-       <button class="btn go" id="connect">Save and connect Strava</button>
-       <div class="field" style="margin-top:22px"><label for="codeIn">Got a code from Safari? Paste it here</label><input id="codeIn" autocomplete="off"></div>
-       <button class="btn" id="useCode">Use code</button>`;
-
-  html += `<h2>Goals</h2>
-    <div class="param"><label for="goal">Weekly running goal</label><input id="goal" type="number" inputmode="decimal" step="1" value="${esc(c.weeklyKm || 20)}"><span>km</span></div>`;
-
-  const z = Scoring.zones(p);
-  html += `<h2>Scoring</h2>
-    <p class="hint">Changes re-score all your workouts. Your zones now: effort from ${Math.round(z.mod)} bpm, vigorous from ${Math.round(z.vig)} bpm, max ${Math.round(z.hrMax)} bpm.</p>`;
-  let grp = '';
-  for (const [key, def, label, unit, group, step] of Scoring.PARAMS){
-    if (group !== grp){ html += `<div class="grp">${group}</div>`; grp = group; }
-    html += `<div class="param"><label for="p_${key}">${label}</label>
-      <input id="p_${key}" data-param="${key}" type="number" inputmode="decimal" step="${step}" value="${p[key]}" class="${p[key] !== def ? 'changed' : ''}"><span>${unit}</span></div>`;
+  if (path === '/strava'){
+    let html = `${backTo('#/settings', 'Settings')}<h1 class="brand">Strava</h1>`;
+    if (pendingCode) html += `<h2>Finish connecting</h2>
+      <p class="hint">Strava sent you back to Safari instead of the app. Copy this code, open Vitamin Me from your home screen, and paste it under Settings, Strava.</p>
+      <div class="field"><input id="codeOut" readonly value="${esc(pendingCode)}"></div>
+      <button class="btn go" id="copyCode">Copy code</button>`;
+    html += tok
+      ? `<p>Connected as <b>${esc(tok.athlete?.name || 'your account')}</b>. Workouts sync when you open the app and when you tap sync.</p>
+         <button class="btn" id="resync">Re-sync last 12 months</button>
+         <button class="btn danger" id="disconnect">Disconnect Strava</button>`
+      : `<p class="hint">One-time setup. At <code>strava.com/settings/api</code>, create an application with Authorization Callback Domain <code>${esc(location.hostname)}</code>. Paste its Client ID and Client Secret here. They are stored only on this phone.</p>
+         <div class="field"><label for="cid">Client ID</label><input id="cid" inputmode="numeric" autocomplete="off" value="${esc(c.clientId || '')}"></div>
+         <div class="field"><label for="csec">Client Secret</label><input id="csec" type="password" autocomplete="off" value="${esc(c.clientSecret || '')}"></div>
+         <button class="btn go" id="connect">Save and connect Strava</button>
+         <div class="field" style="margin-top:22px"><label for="codeIn">Got a code from Safari? Paste it here</label><input id="codeIn" autocomplete="off"></div>
+         <button class="btn" id="useCode">Use code</button>`;
+    return html;
   }
-  html += `<button class="btn" id="resetParams">Reset scoring to defaults</button>`;
 
-  const lastExp = store.get(K.meta, {}).lastExport;
-  html += `<h2>Your data</h2>
-    <p class="hint">Everything is stored only on this phone: ${Object.keys(store.get(K.acts, {})).length} workouts, your shop and your settings. Nothing is sent anywhere except your own requests to Strava.</p>
-    <p class="hint">${persisted === true ? 'Storage is protected: iOS won\'t clear it to free up space.'
-       : persisted === false ? 'Storage isn\'t protected yet. iOS may clear it if the phone runs very low on space, so keep a backup.' : ''}
-       Deleting the app from your home screen deletes its data.</p>
-    <h2>Backup</h2>
-    <p class="hint">A backup file holds your shop, redemptions, scoring settings and appearance. Workouts aren't included; they re-sync from Strava.
-       Last backup: <b>${lastExp ? new Date(lastExp).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' }) : 'never'}</b>.</p>
-    <button class="btn go" id="exportBk">Save backup</button>
-    <button class="btn" id="importBk">Restore from backup file</button><input type="file" id="bkFile" accept="application/json,.json" hidden>
-    <h2>Maintenance</h2>
-    <button class="btn" id="resync">Re-sync last 12 months</button>
-    <button class="btn danger" id="wipe">Delete all data on this phone</button>`;
-  return html;
+  if (path === '/goals') return `${backTo('#/settings', 'Settings')}<h1 class="brand">Goals</h1>
+    <div class="param"><label for="goal">Weekly running goal</label><input id="goal" type="number" inputmode="decimal" step="1" value="${esc(c.weeklyKm || 20)}"><span>km</span></div>
+    <p class="hint">Fills the capsule bar under "Running this week" on the home screen.</p>`;
+
+  if (path === '/scoring'){
+    const z = Scoring.zones(p);
+    return `${backTo('#/settings', 'Settings')}<h1 class="brand">Scoring</h1>
+      <p class="hint">How points are earned. Any change re-scores all your workouts. Your zones now: effort from ${Math.round(z.mod)} bpm, vigorous from ${Math.round(z.vig)} bpm.</p>
+      <div class="slist">${scoringGroups().map(g => { const n = changedIn(g, p); return row(`#/settings/scoring/${slug(g)}`, g, n ? `${n} changed` : 'Default'); }).join('')}</div>
+      <button class="btn" id="resetParams">Reset all scoring to defaults</button>`;
+  }
+
+  if (path.startsWith('/scoring/')){
+    const g = scoringGroups().find(x => slug(x) === path.slice(9));
+    if (!g) return `${backTo('#/settings/scoring', 'Scoring')}<div class="empty">Section not found.</div>`;
+    let html = `${backTo('#/settings/scoring', 'Scoring')}<h1 class="brand">${g}</h1>`;
+    if (g === 'Heart-rate zones'){ const z = Scoring.zones(p);
+      html += `<p class="hint">Effort from ${Math.round(z.mod)} bpm, vigorous from ${Math.round(z.vig)} bpm, max ${Math.round(z.hrMax)} bpm. Zones use heart-rate reserve: resting + percentage × (max − resting).</p>`; }
+    for (const [key, def, label, unit, group, step] of Scoring.PARAMS) if (group === g)
+      html += `<div class="param"><label for="p_${key}">${label}</label>
+        <input id="p_${key}" data-param="${key}" type="number" inputmode="decimal" step="${step}" value="${p[key]}" class="${p[key] !== def ? 'changed' : ''}"><span>${unit}</span></div>`;
+    html += `<p class="hint">Outlined values differ from the default.</p><button class="btn" id="resetGroup" data-group="${esc(g)}">Reset this section</button>`;
+    return html;
+  }
+
+  if (path === '/data'){
+    const lastExp = store.get(K.meta, {}).lastExport;
+    return `${backTo('#/settings', 'Settings')}<h1 class="brand">Backup and data</h1>
+      <h2>Backup</h2>
+      <p class="hint">A backup file holds your shop, redemptions, scoring settings and appearance. Workouts aren't included; they re-sync from Strava.
+         Last backup: <b>${lastExp ? new Date(lastExp).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' }) : 'never'}</b>.</p>
+      <button class="btn go" id="exportBk">Save backup</button>
+      <button class="btn" id="importBk">Restore from backup file</button><input type="file" id="bkFile" accept="application/json,.json" hidden>
+      <h2>Where your data lives</h2>
+      <p class="hint">Everything is stored only on this phone: ${Object.keys(store.get(K.acts, {})).length} workouts, your shop and your settings. Nothing is sent anywhere except your own requests to Strava.</p>
+      <p class="hint">${persisted === true ? 'Storage is protected: iOS won\'t clear it to free up space.'
+         : persisted === false ? 'Storage isn\'t protected yet. iOS may clear it if the phone runs very low on space, so keep a backup.' : ''}
+         Deleting the app from your home screen deletes its data.</p>
+      <button class="btn danger" id="wipe">Delete all data on this phone</button>`;
+  }
+  return `${backTo('#/settings', 'Settings')}<div class="empty">Page not found.</div>`;
 }
 
+function rerenderSettings(){ const sc = scrollY; route(); scrollTo(0, sc); }
 function bindSettings(){
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-  const setTheme = patch => { setCfg({ theme: { ...(cfg().theme || {}), ...patch } }); applyTheme();
-    const sc = scrollY; $('view').innerHTML = viewSettings(); bindSettings(); scrollTo(0, sc); };
+  const setTheme = patch => { setCfg({ theme: { ...(cfg().theme || {}), ...patch } }); applyTheme(); rerenderSettings(); };
   document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setTheme({ mode: b.dataset.mode }));
   document.querySelectorAll('[data-accent]').forEach(b => b.onclick = () => setTheme({ accent: b.dataset.accent }));
   const ca = $('customAccent'); if (ca) ca.onchange = () => setTheme({ accent: ca.value });
@@ -606,7 +741,7 @@ function bindSettings(){
   on('resync', () => { const m = store.get(K.meta, {}); delete m.latest; store.set(K.meta, m); sync(); });
   on('wipe', async () => {
     if (!confirm('Delete all workouts, tokens and settings from this phone?')) return;
-    Object.values(K).forEach(store.del); store.del(SHOP_KEY); await idb.clear(); invalidate(); applyTheme(); route(); toast('All data deleted.');
+    Object.values(K).forEach(store.del); store.del(SHOP_KEY); await idb.clear(); invalidate(); applyTheme(); location.hash = '#/settings'; route(); toast('All data deleted.');
   });
   on('exportBk', exportBackup);
   on('importBk', () => $('bkFile').click());
@@ -630,13 +765,19 @@ function bindSettings(){
     const before = fxSig();
     setCfg({ params: { ...(cfg().params || {}), [key]: v } });
     if (fxSig() !== before) await rescoreAll();
-    invalidate();
-    const sc = scrollY; $('view').innerHTML = viewSettings(); bindSettings(); scrollTo(0, sc);   // refresh zone summary
+    invalidate(); rerenderSettings();
     toast(`Points recalculated: ${nf(getLedger().total)} total.`);
   });
   on('resetParams', async () => {
     if (!confirm('Reset all scoring parameters to their defaults?')) return;
-    setCfg({ params: {} }); await rescoreAll(); invalidate(); route(); toast(`Defaults restored: ${nf(getLedger().total)} points.`);
+    setCfg({ params: {} }); await rescoreAll(); invalidate(); rerenderSettings(); toast(`Defaults restored: ${nf(getLedger().total)} points.`);
+  });
+  on('resetGroup', async () => {
+    const g = $('resetGroup').dataset.group;
+    if (!confirm(`Reset ${g} to the defaults?`)) return;
+    const keys = new Set(Scoring.PARAMS.filter(x => x[4] === g).map(x => x[0]));
+    setCfg({ params: Object.fromEntries(Object.entries(cfg().params || {}).filter(([k]) => !keys.has(k))) });
+    await rescoreAll(); invalidate(); rerenderSettings(); toast(`${g} reset: ${nf(getLedger().total)} points.`);
   });
 }
 
@@ -686,14 +827,15 @@ function route(){
   teardownMap();
   const h = location.hash || '#/';
   if (h.startsWith('#/a/')) viewDetail(h.slice(4));
-  else if (h === '#/settings'){ $('view').innerHTML = viewSettings(); bindSettings(); }
+  else if (h.startsWith('#/settings')){ $('view').innerHTML = viewSettings(h.slice(10)); bindSettings(); }
   else if (h.startsWith('#/shop') && routeShop(h)){}
   else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); }
+  else if (h === '#/territory'){ $('view').innerHTML = viewTerritory(); drawTerritory(); }
   else { $('view').innerHTML = viewHome(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
   markNav();
 }
 function markNav(){
-  const h = location.hash || '#/', cur = h.startsWith('#/shop') ? 'navShop' : h === '#/settings' ? 'navSettings' : h === '#/progress' ? 'navProgress' : 'navHome';
+  const h = location.hash || '#/', cur = h.startsWith('#/shop') ? 'navShop' : h.startsWith('#/settings') ? 'navSettings' : (h === '#/progress' || h === '#/territory') ? 'navProgress' : 'navHome';
   ['navHome','navProgress','navShop','navSettings'].forEach(id => $(id).toggleAttribute('aria-current', id === cur));
 }
 function setSyncBtn(busy){ const b = $('navSync'); b.disabled = busy; b.classList.toggle('spin', busy); b.setAttribute('aria-label', busy ? 'Syncing' : 'Sync from Strava'); }
@@ -711,10 +853,11 @@ window.addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
 
 applyTheme();
 ensurePersistent();
-if (pendingCode) location.hash = '#/settings';
+if (pendingCode) location.hash = '#/settings/strava';
 (async () => {
   if (store.get(K.acts, null) && !fxGet()) { await rescoreAll(); invalidate(); }
   route();
+  if (await ensureTiles()){ invalidate(); if (!location.hash.startsWith('#/a/')) route(); }
   if (store.get(K.tok, null) && Date.now() - (store.get(K.meta, {}).lastSync || 0) > 600000) sync();
 })();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

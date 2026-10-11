@@ -74,12 +74,20 @@ function markSeen(){
 }
 
 let celebrating = false;
-function celebrate(){
+/* demo: replay with your latest collections without changing what's been seen */
+function celebrate(demo = 0){
   if (celebrating) return;
   const R = getLedger().rec; if (!R) return;
-  const { fresh, list } = unseen();
-  if (!list.length){ markSeen(); return; }           // also absorbs decreases after parameter edits
-  celebrating = true; markSeen();
+  let fresh, list;
+  if (demo){
+    const n = Math.min(demo, R.log.length); if (!n){ toast('Collect your first vitamin to see it drop into the jar.'); return; }
+    fresh = new Set(R.log.map((_, i) => i).slice(-n)); list = R.log.slice(-n);
+  } else {
+    ({ fresh, list } = unseen());
+    if (!list.length){ markSeen(); return; }         // also absorbs decreases after parameter edits
+    markSeen();
+  }
+  celebrating = true;
 
   const byId = Object.fromEntries(R.vitamins.map(v => [v.id, v]));
   // animate at most 10 drops; older new ones are simply already in the jar

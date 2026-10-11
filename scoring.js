@@ -36,6 +36,8 @@
 
     ['prPts',        50,  'New 1 km, 5 km, 10 km or half record', 'pts', 'Records', 5],
     ['longestPts',   30,  'New longest run',                   'pts',  'Records', 5],
+
+    ['tilePts',       2,  'Each new territory tile',           'pts',  'Exploration', 0.5],
   ];
   const DEFAULTS = Object.fromEntries(PARAMS.map(p => [p[0], p[1]]));
 

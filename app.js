@@ -312,6 +312,10 @@ function routeSvg(poly, size = 52){
 }
 
 /* ---------------- views ---------------- */
+/* Strava attribution: required on every screen that shows Strava data. White logo on dark, black on light. */
+const poweredByStrava = () => `<div class="pbs"><img class="pbs-w" src="strava-powered-white.png" alt="Powered by Strava" width="176" height="60">
+  <img class="pbs-b" src="strava-powered-black.png" alt="Powered by Strava" width="176" height="60"></div>`;
+
 let map = null;
 function teardownMap(){ stopRace(); if (map){ map.remove(); map = null; } if (terrMap){ terrMap.remove(); terrMap = null; } }
 const sorted = () => Object.values(store.get(K.acts, {})).sort((x,y) => y.start.localeCompare(x.start));
@@ -336,16 +340,17 @@ function viewHome(){
   const month = new Date(now.getFullYear(), now.getMonth(), 1);
   const runKm = from => acts.filter(a => new Date(a.start) >= from && RUNS.has(a.type)).reduce((s,a) => s + a.dist, 0) / 1000;
   const wkKm = runKm(monday), moKm = runKm(month), moN = acts.filter(a => new Date(a.start) >= month).length;
-  const goal = c.weeklyKm || 20;
+  const goal = c.weeklyKm || 20, mGoal = c.monthlyKm || 80;
+  const col = (label, km, g, foot) => `<div class="pcol"><div class="lbl">${label}</div><div class="big">${km.toFixed(1)}<small>km</small></div>
+      <div class="capsule" role="img" aria-label="${Math.round(km / g * 100)}% of ${g} km goal"><i style="width:${Math.min(100, km / g * 100)}%"></i></div>
+      <div class="lbl pfoot"><span>Goal ${nf(g)} km</span><span>${foot}</span></div></div>`;
   html += `<div class="period">
-      <div><div class="lbl">Running this week</div><div class="big">${wkKm.toFixed(1)}<small>km</small></div>
-        <div class="capsule" role="img" aria-label="${Math.round(wkKm/goal*100)}% of ${goal} km goal"><i style="width:${Math.min(100, wkKm/goal*100)}%"></i></div>
-        <div class="lbl" style="margin-top:6px">Goal ${goal} km</div></div>
-      <div><div class="lbl">Running in ${now.toLocaleString('en-ZA', { month:'long' })}</div><div class="big">${moKm.toFixed(1)}<small>km</small></div>
-        <div class="lbl" style="margin-top:22px">${moN} workout${moN === 1 ? '' : 's'} this month</div></div>
+      ${col('Running this week', wkKm, goal, `${Math.round(Math.min(999, wkKm / goal * 100))}%`)}
+      ${col(`Running in ${now.toLocaleString('en-ZA', { month:'long' })}`, moKm, mGoal, `${moN} workout${moN === 1 ? '' : 's'}`)}
     </div>`;
 
   html += `<h2>Workouts</h2>${listControlsHtml(acts)}<div id="wlist">${workoutListHtml(acts)}</div>`;
+  html += poweredByStrava();
   return html;
 }
 
@@ -420,6 +425,7 @@ function detailHtml(a, d, s){
           <td>${x.elevation_difference != null ? (x.elevation_difference > 0 ? '+' : '') + Math.round(x.elevation_difference) + ' m' : '-'}</td></tr>`;
       }).join('') + `</tbody></table>`;
   }
+  html += poweredByStrava();
   return html;
 }
 
@@ -513,13 +519,13 @@ function workoutListHtml(acts){
   const pts = xs.reduce((s, a) => s + (L.byAct[a.id]?.total || 0), 0);
   const filtered = f.type !== 'all' || f.period !== 'all' || f.hl !== 'any';
   let html = `<div class="listsum"><span><b>${xs.length}</b> workout${xs.length === 1 ? '' : 's'}</span>${dist >= 0.05 ? `<span><b>${nf(dist, 1)}</b> km</span>` : ''}
-    <span><b>${dur(time)}</b></span><span class="xpinl">${xpIcon(14)}<b>+${nf(pts)}</b></span>${filtered ? '<button class="linkbtn" data-freset>Clear filters</button>' : ''}</div>`;
+    <span><b>${dur(time)}</b></span><span class="xpinl"><b>+${nf(pts)}</b> ${xpIcon(14)}</span>${filtered ? '<button class="linkbtn" data-freset>Clear filters</button>' : ''}</div>`;
   if (!xs.length) return html + `<div class="empty">No workouts match these filters.</div>`;
   html += xs.slice(0, f.n).map(a => {
     const svg = a.poly ? routeSvg(a.poly) : null, d = km(a.dist), r = L.byAct[a.id];
     const sub = [a.moving ? dur(a.moving) : null, paceOrSpeed(a), a.avgHr ? `${Math.round(a.avgHr)} bpm` : null]
                   .filter(Boolean).map(x => `<span>${x}</span>`).join('');
-    const p = r ? (r.pending ? `<div>scoring…</div>` : `<div class="pts">${xpIcon(14)}+${nf(r.total)}</div>`) : '';
+    const p = r ? (r.pending ? `<div>scoring…</div>` : `<div class="pts">+${nf(r.total)} ${xpIcon(14)}</div>`) : '';
     return `<a class="act" href="#/a/${a.id}">
       <div class="thumb">${svg || esc(typeName(a.type))}</div>
       <div style="min-width:0"><div class="t">${esc(a.name)}</div><div class="m">${when(a.start)}</div><div class="m">${sub}</div></div>
@@ -605,6 +611,7 @@ function viewProgress(){
     return `<${tag} class="rec"${href}><div><div class="t">${esc(r.label)}</div><div class="m">${sub}</div></div><div class="rv">${recordValue(r)}</div></${tag}>`;
   }).join('') + `</div>` : `<p class="hint">Records appear once you've synced runs.</p>`;
   html += `<p class="hint">Beating a 1 km, 5 km, 10 km or half-marathon time earns +${getLedger().params.prPts} XP, a new longest run +${getLedger().params.longestPts}. Times are Strava's best efforts within your runs.</p>`;
+  html += poweredByStrava();
   return html;
 }
 
@@ -655,7 +662,7 @@ function viewTerritory(){
       <div><div class="v">${T.square.size}×${T.square.size}</div><div class="k">Biggest square</div></div>
     </div>
     <p class="hint">The whole world is split into a grid of tiles${here !== null ? `, about ${Math.round(Territory.tileSizeM(here))} m across where you run` : ''}. Pass through a tile you've never visited to claim it: +${p.tilePts} XP each, and every 100 tiles is a Vitamin B3. Repeating the same loop earns nothing new, so go explore.</p>
-    <p class="hint">Largest area is your biggest connected patch of tiles. Biggest square is the largest solid block with no gaps; fill in the holes to grow it.</p>`;
+    <p class="hint">Largest area is your biggest connected patch of tiles. Biggest square is the largest solid block with no gaps; fill in the holes to grow it.</p>${poweredByStrava()}`;
 }
 function drawTerritory(){
   if (terrMap){ terrMap.remove(); terrMap = null; }
@@ -716,7 +723,7 @@ function viewSettings(path = ''){
     html += `<div class="slist">
       ${row('#/settings/appearance', 'Appearance', `${mode[0].toUpperCase() + mode.slice(1)} theme, ${accName.toLowerCase()} accent`)}
       ${row('#/settings/strava', 'Strava', tok ? `Connected as ${esc(tok.athlete?.name || 'you')}` : 'Not connected')}
-      ${row('#/settings/goals', 'Goals', `${nf(c.weeklyKm || 20)} km of running a week`)}
+      ${row('#/settings/goals', 'Goals', `${nf(c.weeklyKm || 20)} km a week, ${nf(c.monthlyKm || 80)} km a month`)}
       ${row('#/settings/scoring', 'XP and leagues', n ? `${n} setting${n > 1 ? 's' : ''} changed from default` : 'Default settings')}
       ${row('#/settings/data', 'Backup and data', ago === null ? 'No backup yet' : ago === 0 ? 'Backed up today' : `Last backup ${ago} day${ago > 1 ? 's' : ''} ago`)}
     </div>`;
@@ -757,7 +764,8 @@ function viewSettings(path = ''){
 
   if (path === '/goals') return `${backTo('#/settings', 'Settings')}<h1 class="brand">Goals</h1>
     <div class="param"><label for="goal">Weekly running goal</label><input id="goal" type="number" inputmode="decimal" step="1" value="${esc(c.weeklyKm || 20)}"><span>km</span></div>
-    <p class="hint">Fills the capsule bar under "Running this week" on the home screen.</p>`;
+    <div class="param"><label for="mgoal">Monthly running goal</label><input id="mgoal" type="number" inputmode="decimal" step="5" value="${esc(c.monthlyKm || 80)}"><span>km</span></div>
+    <p class="hint">These fill the bars under "Running this week" and "Running in" this month on the home screen.</p>`;
 
   if (path === '/scoring'){
     const z = Scoring.zones(p);
@@ -838,7 +846,8 @@ function bindSettings(){
       applyTheme(); await rescoreAll(); invalidate(); route(); toast('Backup restored.');
     } catch(e){ toast('Import failed: ' + e.message, true); }
   };
-  const g = $('goal'); if (g) g.onchange = () => { const v = parseFloat(g.value); if (v > 0){ setCfg({ weeklyKm: v }); toast('Goal saved.'); } };
+  const g = $('goal'); if (g) g.onchange = () => { const v = parseFloat(g.value); if (v > 0){ setCfg({ weeklyKm: v }); toast('Weekly goal saved.'); } };
+  const mg = $('mgoal'); if (mg) mg.onchange = () => { const v = parseFloat(mg.value); if (v > 0){ setCfg({ monthlyKm: v }); toast('Monthly goal saved.'); } };
 
   document.querySelectorAll('[data-param]').forEach(inp => inp.onchange = async () => {
     const key = inp.dataset.param, v = parseFloat(inp.value);

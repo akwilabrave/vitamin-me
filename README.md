@@ -17,14 +17,15 @@ A personal fitness app for iPhone that turns your workouts into XP, a ranked lad
 7. [Territory](#territory)
 8. [Ghost runner](#ghost-runner)
 9. [Levels and leagues](#levels-and-leagues)
-10. [Your data, privacy and backups](#your-data-privacy-and-backups)
-11. [Syncing with Strava](#syncing-with-strava)
-12. [Architecture](#architecture)
-13. [File reference](#file-reference)
-14. [Setup](#setup)
-15. [Development](#development)
-16. [Known limitations](#known-limitations)
-17. [Open questions and ideas](#open-questions-and-ideas)
+10. [Strava attribution](#strava-attribution)
+11. [Your data, privacy and backups](#your-data-privacy-and-backups)
+12. [Syncing with Strava](#syncing-with-strava)
+13. [Architecture](#architecture)
+14. [File reference](#file-reference)
+15. [Setup](#setup)
+16. [Development](#development)
+17. [Known limitations](#known-limitations)
+18. [Open questions and ideas](#open-questions-and-ideas)
 
 ---
 
@@ -81,10 +82,11 @@ The bottom bar has five buttons:
 | Sliders | **Settings** | Appearance, Strava, goals, scoring rules, backup and data |
 
 ### Workouts (home)
-- **Rank:** your league badge, league and division (e.g. *Fartlek III*), level and an XP bar to the next level.
-- **Status row:** your streak (pulse-flame icon, weeks in a row with 3+ workouts, and the XP boost it gives), XP earned this week, and progress toward this week's 3 workouts. If your league has a weekly minimum, a line under it says how much is left to hold your league.
+- **Rank:** your league badge, league and division (e.g. *Jogger III*), level and an XP bar to the next level.
+- **Streak card:** the pulse-flame icon with weeks in a row of 3+ workouts, the XP boost it gives, and three marks for this week's workouts.
+- **XP card:** XP earned this week. If your league has a weekly minimum, a line under the cards says how much is left to hold your league.
 - **Vitamin jar** (top right): one capsule for every vitamin you've collected. Tap it to open Progress.
-- **Running this week / this month:** with a bar toward your weekly km goal.
+- **Running this week / this month:** side by side, each with a bar toward its goal (weekly and monthly km goals are set under **Settings → Goals**).
 - **Workout list:** with filters:
   - **Type chips:** All, Runs, Walks, Rides, Strength, Other. Only the types you have are shown.
   - **Period:** All time, This week, This month, 30 days, This year.
@@ -273,22 +275,22 @@ The comparison uses **elapsed** time, so stops count, as they would in a real ra
 
 ## Levels and leagues
 
-XP drives a ranked ladder: **60 levels in 12 leagues** of five divisions each (e.g. *Hill Repeater IV*). Each league has its own badge, and the badges get grander as you climb: from a plain grey disc, through metal shields, to winged crests, then laurel wreaths and a crown, and finally an animated prismatic crest. Only your current league and the **next one** are revealed; everything above stays hidden until it's next.
+XP drives a ranked ladder: **60 levels in 12 leagues** of five divisions each (e.g. *Pacer IV*). Every league badge is the same shield, so they read as one family; grandeur builds gradually: the metal changes (grey, bronze, copper, silver, emerald, teal, sapphire, amethyst, ruby, gold, platinum, prismatic), then a bevel, a chevron and a gem are added, wings grow from Pacer, laurels from Harrier and a crown from Ultra, with a glow and shimmer at Elite and rotating rays at Legend. Only your current league and the **next one** are revealed; everything above stays hidden until it's next.
 
 | # | League | Levels | XP to enter | Weekly minimum |
 |---|---|---|---|---|
-| 1 | Lace-Up | 1–5 | 0 | none |
-| 2 | Shuffler | 6–10 | 380 | none |
-| 3 | Fartlek | 11–15 | 1,490 | 40 |
+| 1 | Couch | 1–5 | 0 | none |
+| 2 | Starter | 6–10 | 380 | none |
+| 3 | Jogger | 11–15 | 1,490 | 40 |
 | 4 | Strider | 16–20 | 3,900 | 70 |
-| 5 | Hill Repeater | 21–25 | 8,080 | 100 |
-| 6 | Negative Split | 26–30 | 14,490 | 140 |
-| 7 | Lactate | 31–35 | 23,550 | 190 |
-| 8 | VO₂ Max | 36–40 | 35,660 | 250 |
-| 9 | Sub-3 | 41–45 | 51,190 | 320 |
-| 10 | Comrades | 46–50 | 70,500 | 400 |
-| 11 | Sub-2 | 51–55 | 93,960 | 500 |
-| 12 | Pheidippides | 56–60 | 121,920 | 600 |
+| 5 | Pacer | 21–25 | 8,080 | 100 |
+| 6 | Tempo | 26–30 | 14,490 | 140 |
+| 7 | Threshold | 31–35 | 23,550 | 190 |
+| 8 | Harrier | 36–40 | 35,660 | 250 |
+| 9 | Marathoner | 41–45 | 51,190 | 320 |
+| 10 | Ultra | 46–50 | 70,500 | 400 |
+| 11 | Elite | 51–55 | 93,960 | 500 |
+| 12 | Legend | 56–60 | 121,920 | 600 |
 
 ### The level curve
 
@@ -302,14 +304,14 @@ That's 50 XP for the first level, about 1,600 by level 25, and about 7,000 near 
 
 XP reflects *current* training, not just history, so it can go down. Two rules apply to every **completed** week (Monday to Sunday):
 
-1. **Weekly minimum.** From Fartlek up, each league has a weekly minimum (table above). Finish a week below it and you **lose that minimum**. The rule is deliberately all-or-nothing: losing only the shortfall would let steady low training climb forever.
+1. **Weekly minimum.** From Jogger up, each league has a weekly minimum (table above). Finish a week below it and you **lose that minimum**. The rule is deliberately all-or-nothing: losing only the shortfall would let steady low training climb forever.
 2. **Detraining.** A week with **no workouts at all** also costs **2% of your XP**, the way fitness fades.
 
 Losing XP across a level boundary drops you a level; dropping below a league's first level drops the league.
 
 **Protections:**
 - **Week-end only:** the current week is never penalised until it's over.
-- **Safe start:** Lace-Up and Shuffler have no penalties.
+- **Safe start:** Couch and Starter have no penalties.
 - **Grace weeks:** the first 2 weeks after reaching a league are minimum-free.
 - **Pause weeks:** pause up to 6 weeks a year for injury, illness or exams, with no minimum and no detraining. Only this week or last week can be paused.
 - **Floor:** XP never goes below 0.
@@ -320,11 +322,11 @@ Because missing the minimum costs the whole minimum, **steady training settles i
 
 | Steady weekly XP | Roughly | Settles in |
 |---|---|---|
-| ~70 | 2 easy runs | Strider / Hill Repeater |
-| ~150 | 3 runs of 5 km | Negative Split / Lactate |
-| ~300 | 4 runs with a long run | VO₂ Max / Sub-3 |
-| ~450 | 5 runs, ~35 km | Comrades / Sub-2 |
-| 600+ for about 4 years | serious training | Pheidippides |
+| ~70 | 2 easy runs | Strider / Pacer |
+| ~150 | 3 runs of 5 km | Tempo / Threshold |
+| ~300 | 4 runs with a long run | Harrier / Marathoner |
+| ~450 | 5 runs, ~35 km | Ultra / Elite |
+| 600+ for about 4 years | serious training | Legend |
 
 Your rank is placed by replaying your whole history, so the first time you open the League tab you land where your past year honestly puts you.
 
@@ -335,6 +337,10 @@ Placement, level-ups (XP bar fills), promotions (badge reveal with a sunburst) a
 ### Tuning
 
 **Settings → XP and leagues → Leagues** adjusts minimum strength (%), detraining (%), grace weeks and pause weeks per year. The level curve and league thresholds are fixed, so the top can't be reached by changing settings.
+
+## Strava attribution
+
+Every screen that shows Strava data (workouts, a workout, ghost race, progress, territory, league) ends with the official **Powered by Strava** logo: `strava-powered-white.png` in dark mode and `strava-powered-black.png` in light mode, shown small at the bottom of the page.
 
 ## Your data, privacy and backups
 
@@ -473,6 +479,7 @@ vitamin-me/
 ├── league-ui.js      Badges, icons, League page, rank celebrations
 ├── sw.js             Service worker: offline app shell
 ├── manifest.json     Home-screen install metadata
+├── strava-powered-white.png / -black.png   Strava attribution logos
 ├── icon-180.png      Apple touch icon
 ├── icon-192.png      App icon
 ├── icon-512.png      App icon (large)

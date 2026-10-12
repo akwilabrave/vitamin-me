@@ -63,7 +63,7 @@ async function viewGhost(arg){
       ${C.splits.map(s => `<tr><td>${s.km}</td><td>${dur(s.you)}</td><td>${dur(s.ghost)}</td>
         <td class="${s.diff >= 0 ? 'ahead' : 'behind'}">${signed(s.diff)}</td><td class="${s.gap >= 0 ? 'ahead' : 'behind'}">${signed(s.gap)}</td></tr>`).join('')}
     </tbody></table>
-    <p class="hint">Split: how much faster (+) or slower (−) that kilometre was than your ghost's. Gap: your total lead (+) or deficit (−) at that point. Uses elapsed time, so stops count, as in a real race.</p>`;
+    <p class="hint">Split: how much faster (+) or slower (−) that kilometre was than your ghost's. Gap: your total lead (+) or deficit (−) at that point. Uses elapsed time, so stops count, as in a real race.</p>${poweredByStrava()}`;
 
   document.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { location.hash = `#/ghost/${id}?vs=${b.dataset.vs}`; });
   drawRace(you, gh);

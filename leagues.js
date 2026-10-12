@@ -8,7 +8,7 @@
      minimum      a completed week below your league's weekly minimum loses that minimum
                   (so steady training settles in the league whose minimum it can hold)
      detraining   a completed week with zero workouts also loses detrainPct % of total XP
-     protections  current week never penalised · Lace-Up and Shuffler never penalised ·
+     protections  current week never penalised · Couch and Starter never penalised ·
                   first graceWeeks weeks in a newly reached league are upkeep-free ·
                   paused weeks (injury, illness, exams) skip both penalties · floor 0 XP
    Loaded in the browser as globalThis.Leagues; requireable in Node for tests.
@@ -18,18 +18,18 @@
   const S = root.Scoring || (typeof require !== 'undefined' ? require('./scoring.js') : null);
 
   const LEAGUES = [
-    { name: 'Lace-Up',       blurb: 'Every run starts with tying them.',                       upkeep: 0 },
-    { name: 'Shuffler',      blurb: 'Not pretty yet, but moving.',                             upkeep: 0 },
-    { name: 'Fartlek',       blurb: 'Swedish for speed play: run by feel.',                    upkeep: 40 },
-    { name: 'Strider',       blurb: 'Smooth, quick strides. Form arrives.',                    upkeep: 70 },
-    { name: 'Hill Repeater', blurb: 'Up, jog down, again. Strength built the hard way.',       upkeep: 100 },
-    { name: 'Negative Split',blurb: 'Second half faster than the first. Discipline.',          upkeep: 140 },
-    { name: 'Lactate',       blurb: 'Living right at the threshold.',                          upkeep: 190 },
-    { name: 'VO₂ Max',       blurb: 'Your engine at its ceiling, and the ceiling rising.',     upkeep: 250 },
-    { name: 'Sub-3',         blurb: 'Marathon pace most runners never touch.',                 upkeep: 320 },
-    { name: 'Comrades',      blurb: 'Durban to Pietermaritzburg, and back. Ultra country.',    upkeep: 400 },
-    { name: 'Sub-2',         blurb: 'The barrier they said was impossible.',                   upkeep: 500 },
-    { name: 'Pheidippides',  blurb: 'Marathon to Athens. Where it all began.',                 upkeep: 600 },
+    { name: 'Couch',      blurb: 'Everyone starts here. The first step is the hardest.',    upkeep: 0 },
+    { name: 'Starter',    blurb: 'Laces tied, habit forming.',                              upkeep: 0 },
+    { name: 'Jogger',     blurb: 'Running regularly, at your own pace.',                    upkeep: 40 },
+    { name: 'Strider',    blurb: 'Smooth and steady. Form is arriving.',                    upkeep: 70 },
+    { name: 'Pacer',      blurb: 'You know your paces, and you hold them.',                 upkeep: 100 },
+    { name: 'Tempo',      blurb: 'Comfortably hard, week after week.',                      upkeep: 140 },
+    { name: 'Threshold',  blurb: 'Living right at the edge of your limits.',                upkeep: 190 },
+    { name: 'Harrier',    blurb: 'Fast, relentless and built for distance.',                upkeep: 250 },
+    { name: 'Marathoner', blurb: '42.2 km is within reach, or already behind you.',         upkeep: 320 },
+    { name: 'Ultra',      blurb: 'Beyond the marathon. Few come this far.',                 upkeep: 400 },
+    { name: 'Elite',      blurb: 'Training like it is your job.',                           upkeep: 500 },
+    { name: 'Legend',     blurb: 'The top. Few reach it, fewer hold it.',                   upkeep: 600 },
   ];
   const PER_LEAGUE = 5, MAX_LEVEL = LEAGUES.length * PER_LEAGUE;   // 60
   const SAFE_LEAGUES = 2;                                           // no penalties below this index

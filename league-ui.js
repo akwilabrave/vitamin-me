@@ -22,98 +22,85 @@ function streakIcon(size = 18, lit = true){
     <path d="M5.5 15h3l1.4-3 2.2 6 1.6-4.2 1 1.2h3.8" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-/* ---------- badges ---------- */
-const METALS = ['#8d97a3', '#a97c50', '#c8763a', '#aab6c2', '#2f9e64', '#1fa2b3', '#e0533d', '#3d73e0', '#8a4ff0', '#e2a21c', '#d6e1ef', 'prism'];
+/* ---------- badges ----------
+   One family: every league uses the same shield, so badges read as ranks of one system.
+   Grandeur builds gradually and cumulatively:
+     metal colour (grey → bronze → silver → gold → platinum → prismatic) · bevel (1+) ·
+     chevron (2+) · top gem (3+) · wings growing 2→4 feathers (4+) · laurels (7+) ·
+     crown (9+) · glow (10+) · rays and shimmer (11) */
+const METALS = ['#8d97a3', '#a97c50', '#c8763a', '#aab6c2', '#2f9e64', '#1fa2b3', '#3d73e0', '#8a4ff0', '#d6334f', '#e2a21c', '#d6e1ef', 'prism'];
 const mixHex = (a, b, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const x = p(a), y = p(b);
   return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
 const lum = h => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; };
 
 const SHIELD = 'M60 22 92 32V58c0 22-14 36-32 44C42 94 28 80 28 58V32Z';
+const SHIELD_IN = 'M60 29 86 37V58c0 18-11 30-26 37C45 88 34 76 34 58V37Z';
 const EMBLEMS = [
-  'M12 13c-3-4-8-4-8-1s5 3 8 1zm0 0c3-4 8-4 8-1s-5 3-8 1zM12 13l-3 7M12 13l3 7',                                    // Lace-Up: laces
-  'M7 2.5c1.6 0 2.6 1.9 2.6 4.4 0 2.1-.8 3.6-2.3 3.6S4.6 9 4.6 6.9C4.6 4.3 5.5 2.5 7 2.5zM5.4 13.6a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 0 0-3.4 0zM16.6 8c1.6 0 2.6 1.9 2.6 4.4 0 2.1-.8 3.6-2.3 3.6s-2.7-1.5-2.7-3.6c0-2.6.9-4.4 2.4-4.4zM15 19.1a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 0 0-3.4 0z',  // Shuffler: footprints
-  'M2 15l4-6 4 8 4-11 4 9 4-4',                                                                                       // Fartlek: speed play
-  'M5 5l7 7-7 7M12 5l7 7-7 7',                                                                                        // Strider: forward
-  'M2 20 9 8l4 6 3-4 6 10zM16 2v6M13 5l3-3 3 3',                                                                      // Hill Repeater
-  'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 14V10M12 14l3 2M10 2h4M12 2v4',                                           // Negative Split: stopwatch
-  'M12 2.5c4 5 7 9 7 12.5a7 7 0 0 1-14 0c0-3.5 3-7.5 7-12.5zM9 15a3 3 0 0 0 3 3',                                    // Lactate: drop
-  null, null,                                                                                                          // VO₂ Max, Sub-3: text
-  'M12 21c-5 0-8-4-8-9 2 1 4 2 5 4-.5-4 .5-8 3-11 2.5 3 3.5 7 3 11 1-2 3-3 5-4 0 5-3 9-8 9z',                        // Comrades: protea
-  null,                                                                                                                // Sub-2: text
-  'M8.5 10.5h7l-2 11h-3zM12 1.8c2.4 2.4 3.6 4.3 3.6 6a3.6 3.6 0 0 1-7.2 0c0-1.7 1.2-3.6 3.6-6zM12 5.5c.9 1 1.3 1.7 1.3 2.3a1.3 1.3 0 0 1-2.6 0c0-.6.4-1.3 1.3-2.3z',  // Pheidippides: torch
+  'M5 13v-2.5A2.5 2.5 0 0 1 7.5 8h9a2.5 2.5 0 0 1 2.5 2.5V13M3 13.5a2 2 0 0 1 4 0V15h10v-1.5a2 2 0 0 1 4 0V18H3zM5 18v2M19 18v2',  // Couch
+  'M12 13c-3-4-8-4-8-1s5 3 8 1zm0 0c3-4 8-4 8-1s-5 3-8 1zM12 13l-3 7M12 13l3 7',                                                  // Starter: laces
+  'M7 2.5c1.6 0 2.6 1.9 2.6 4.4 0 2.1-.8 3.6-2.3 3.6S4.6 9 4.6 6.9C4.6 4.3 5.5 2.5 7 2.5zM5.4 13.6a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 0 0-3.4 0zM16.6 8c1.6 0 2.6 1.9 2.6 4.4 0 2.1-.8 3.6-2.3 3.6s-2.7-1.5-2.7-3.6c0-2.6.9-4.4 2.4-4.4zM15 19.1a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 0 0-3.4 0z', // Jogger
+  'M5 5l7 7-7 7M12 5l7 7-7 7',                                                                                                       // Strider
+  'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 14V10M12 14l3 2M10 2h4M12 2v4',                                                          // Pacer: stopwatch
+  'M8 21.5h8L13.6 3h-3.2zM12 16l4.5-8.5M9.2 12h5.6',                                                                                 // Tempo: metronome
+  'M12 2.5c4 5 7 9 7 12.5a7 7 0 0 1-14 0c0-3.5 3-7.5 7-12.5zM9 15a3 3 0 0 0 3 3',                                                   // Threshold: drop
+  'M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7',                                                                             // Harrier: wind
+  null,                                                                                                                              // Marathoner: text
+  'M2 20 9 8l4 6 3-4 6 10zM16 2v5M13.5 4.5 16 2l2.5 2.5',                                                                           // Ultra: mountain
+  'M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z',                                                    // Elite: star
+  'M8.5 10.5h7l-2 11h-3zM12 1.8c2.4 2.4 3.6 4.3 3.6 6a3.6 3.6 0 0 1-7.2 0c0-1.7 1.2-3.6 3.6-6zM12 5.5c.9 1 1.3 1.7 1.3 2.3a1.3 1.3 0 0 1-2.6 0c0-.6.4-1.3 1.3-2.3z', // Legend: torch
 ];
-const EMBLEM_TEXT = { 7: 'O₂', 8: '2:59', 10: '1:59' };
+const EMBLEM_TEXT = { 8: '42.2' };
 
 function badgeSvg(li, opt = {}){
   const size = opt.size || 96, id = uid_('b'), t = li, locked = !!opt.locked;
   const prism = METALS[t] === 'prism', base = prism ? '#c9a8ff' : METALS[t];
-  const light = prism ? '#ffe7a3' : mixHex(base, '#ffffff', .38), dark = prism ? '#5b3fd6' : mixHex(base, '#000000', .38);
+  const light = prism ? '#ffe7a3' : mixHex(base, '#ffffff', .4), dark = prism ? '#5b3fd6' : mixHex(base, '#000000', .38);
   const ink = locked ? 'var(--muted)' : (prism ? '#fff' : (lum(base) > .62 ? '#25303c' : '#ffffff'));
-  const fill = locked ? 'var(--line)' : `url(#${id}m)`, rim = locked ? 'var(--muted)' : dark;
+  const fill = locked ? 'var(--line)' : `url(#${id}m)`, rim = locked ? 'var(--muted)' : dark, soft = locked ? 'var(--line)' : light;
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let defs = `<linearGradient id="${id}m" x1="0" y1="0" x2="0.4" y2="1">` +
+  let defs = `<linearGradient id="${id}m" x1="0" y1="0" x2="0.35" y2="1">` +
     (prism ? `<stop offset="0" stop-color="#ffd36a"/><stop offset=".35" stop-color="#ff7ad9"/><stop offset=".7" stop-color="#7a8cff"/><stop offset="1" stop-color="#55e6ff"/>`
            : `<stop offset="0" stop-color="${light}"/><stop offset=".55" stop-color="${base}"/><stop offset="1" stop-color="${dark}"/>`) + `</linearGradient>
-    <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+    <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <clipPath id="${id}c"><path d="${SHIELD}"/></clipPath>`;
   let back = '', front = '';
 
-  // rays (Sub-2+)
-  if (t >= 10 && !locked){
+  if (t >= 11 && !locked){       // rays
     let r = ''; for (let i = 0; i < 16; i++){ const a = i * Math.PI / 8, b = a + .1;
-      r += `M60 60L${(60 + 58 * Math.cos(a)).toFixed(1)} ${(60 + 58 * Math.sin(a)).toFixed(1)}L${(60 + 58 * Math.cos(b)).toFixed(1)} ${(60 + 58 * Math.sin(b)).toFixed(1)}Z`; }
-    back += `<g opacity=".35"><path d="${r}" fill="${prism ? '#ffd36a' : light}">${reduce ? '' : `<animateTransform attributeName="transform" type="rotate" from="0 60 60" to="360 60 60" dur="${prism ? 24 : 40}s" repeatCount="indefinite"/>`}</path></g>`;
+      r += `M60 60L${(60 + 56 * Math.cos(a)).toFixed(1)} ${(60 + 56 * Math.sin(a)).toFixed(1)}L${(60 + 56 * Math.cos(b)).toFixed(1)} ${(60 + 56 * Math.sin(b)).toFixed(1)}Z`; }
+    back += `<g opacity=".35"><path d="${r}" fill="#ffd36a">${reduce ? '' : '<animateTransform attributeName="transform" type="rotate" from="0 60 60" to="360 60 60" dur="30s" repeatCount="indefinite"/>'}</path></g>`;
   }
-  // 8-point star backplate (Lactate, VO₂ Max)
-  if (t === 6 || t === 7){
-    let s = ''; for (let i = 0; i < 16; i++){ const a = i * Math.PI / 8 - Math.PI / 2, r = i % 2 ? 40 : 52; s += `${i ? 'L' : 'M'}${(60 + r * Math.cos(a)).toFixed(1)} ${(62 + r * Math.sin(a)).toFixed(1)}`; }
-    back += `<path d="${s}Z" fill="${locked ? 'var(--line)' : dark}" opacity="${locked ? .6 : .9}"/>`;
-  }
-  // laurels (Sub-3+)
-  if (t >= 8){
-    // leaves along the lower-left arc (angles in SVG space, y down), mirrored for the right
-    let leaves = `<path d="M${(60 + 45 * Math.cos(1.75)).toFixed(1)} ${(66 + 45 * Math.sin(1.75)).toFixed(1)}A45 45 0 0 1 ${(60 + 45 * Math.cos(3.4)).toFixed(1)} ${(66 + 45 * Math.sin(3.4)).toFixed(1)}" fill="none" stroke-width="2"/>`;
-    for (let i = 0; i < 7; i++){ const th = 1.8 + i * 0.25, x = 60 + 45 * Math.cos(th), y = 66 + 45 * Math.sin(th), deg = th * 180 / Math.PI + 90 + 28;
-      leaves += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="7.5" ry="3.2" transform="rotate(${deg.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`; }
+  if (t >= 7){                   // laurels
+    let leaves = `<path d="M${(60 + 44 * Math.cos(1.75)).toFixed(1)} ${(64 + 44 * Math.sin(1.75)).toFixed(1)}A44 44 0 0 1 ${(60 + 44 * Math.cos(3.35)).toFixed(1)} ${(64 + 44 * Math.sin(3.35)).toFixed(1)}" fill="none" stroke-width="2"/>`;
+    const n = t >= 9 ? 7 : 5;
+    for (let i = 0; i < n; i++){ const th = 1.8 + i * (1.5 / n), x = 60 + 44 * Math.cos(th), y = 64 + 44 * Math.sin(th), deg = th * 180 / Math.PI + 118;
+      leaves += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="7" ry="3" transform="rotate(${deg.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`; }
     const col = locked ? 'var(--line)' : (t >= 9 ? '#e9c25a' : '#7fb069');
-    back += `<g fill="${col}" stroke="${locked ? 'none' : mixHex(col.startsWith('#') ? col : '#7fb069', '#000000', .3)}" stroke-width=".8">${leaves}<g transform="translate(120 0) scale(-1 1)">${leaves}</g></g>`;
+    back += `<g fill="${col}" stroke="${locked ? 'none' : mixHex(t >= 9 ? '#e9c25a' : '#7fb069', '#000000', .3)}" stroke-width=".8">${leaves}<g transform="translate(120 0) scale(-1 1)">${leaves}</g></g>`;
   }
-  // wings (Hill Repeater+)
-  if (t >= 4){
-    const n = t >= 7 ? 4 : t >= 5 ? 3 : 2, col = locked ? 'var(--line)' : (prism ? '#fff6e0' : light), st = locked ? 'none' : dark;
-    let f = ''; for (let i = 0; i < n; i++){ const y = 40 + i * 9, len = 30 - i * 5;
+  if (t >= 4){                   // wings, growing with rank
+    const n = t >= 8 ? 4 : t >= 6 ? 3 : 2, reach = t >= 8 ? 30 : t >= 6 ? 26 : 22;
+    let f = ''; for (let i = 0; i < n; i++){ const y = 40 + i * 9, len = reach - i * 5;
       f += `<path d="M30 ${y + 6}C${30 - len * .6} ${y - 2} ${30 - len} ${y + 2} ${30 - len} ${y + 6}C${30 - len * .7} ${y + 10} ${30 - len * .3} ${y + 12} 30 ${y + 12}Z"/>`; }
-    back += `<g fill="${col}" stroke="${st}" stroke-width="1.2" stroke-linejoin="round">${f}<g transform="translate(120 0) scale(-1 1)">${f}</g></g>`;
+    back += `<g fill="${locked ? 'var(--line)' : (prism ? '#fff6e0' : light)}" stroke="${locked ? 'none' : dark}" stroke-width="1.2" stroke-linejoin="round">${f}<g transform="translate(120 0) scale(-1 1)">${f}</g></g>`;
   }
-  // crown (Comrades+)
-  if (t >= 9) back += `<path d="M38 26 44 10 52 20 60 6 68 20 76 10 82 26Z" fill="${locked ? 'var(--line)' : `url(#${id}m)`}" stroke="${rim}" stroke-width="2" stroke-linejoin="round"/>` +
-    (locked ? '' : `<circle cx="60" cy="12" r="3" fill="#fff"/><circle cx="44" cy="15" r="2.2" fill="#fff" opacity=".85"/><circle cx="76" cy="15" r="2.2" fill="#fff" opacity=".85"/>`);
+  if (t >= 9) back += `<path d="M40 27 45 12 52 21 60 8 68 21 75 12 80 27Z" fill="${fill}" stroke="${rim}" stroke-width="2" stroke-linejoin="round"/>` +
+    (locked ? '' : `<circle cx="60" cy="13" r="2.6" fill="#fff"/>`);
 
-  // plate
-  let plate;
-  if (t === 0) plate = `<circle cx="60" cy="60" r="32" fill="${fill}" stroke="${rim}" stroke-width="3"/>`;
-  else if (t === 1) plate = `<circle cx="60" cy="60" r="35" fill="${fill}" stroke="${rim}" stroke-width="4"/><circle cx="60" cy="60" r="28" fill="none" stroke="${locked ? 'var(--muted)' : light}" stroke-width="1.5" stroke-dasharray="3 3" opacity=".8"/>`;
-  else if (t === 5) { let h = ''; for (let i = 0; i < 6; i++){ const a = Math.PI / 6 + i * Math.PI / 3; h += `${i ? 'L' : 'M'}${(60 + 38 * Math.cos(a)).toFixed(1)} ${(61 + 38 * Math.sin(a)).toFixed(1)}`; }
-    plate = `<path d="${h}Z" fill="${fill}" stroke="${rim}" stroke-width="4" stroke-linejoin="round"/>`; }
-  else plate = `<path d="${SHIELD}" fill="${fill}" stroke="${rim}" stroke-width="${t >= 8 ? 4.5 : 3.5}" stroke-linejoin="round"/>` +
-    (t >= 3 && !locked ? `<path d="M34 70 60 82 86 70" fill="none" stroke="${light}" stroke-width="3" opacity=".7"/>` : '') +
-    (t >= 6 && !locked ? `<path d="M60 28 86 36V58c0 18-11 30-26 37C45 88 34 76 34 58V36Z" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.5"/>` : '');
+  // the shield, identical for every league
+  let plate = `<path d="${SHIELD}" fill="${fill}" stroke="${rim}" stroke-width="${3 + Math.min(t, 8) * 0.2}" stroke-linejoin="round"/>`;
+  if (t >= 1) plate += `<path d="${SHIELD_IN}" fill="none" stroke="${locked ? 'var(--muted)' : '#fff'}" stroke-opacity="${locked ? .4 : .3}" stroke-width="1.5"/>`;
+  if (t >= 2) plate += `<path d="M36 74 60 85 84 74" fill="none" stroke="${soft}" stroke-width="3" stroke-linecap="round" opacity=".75"/>`;
 
-  // emblem
   let emblem;
-  if (locked) emblem = `<text x="60" y="71" text-anchor="middle" font-size="34" font-weight="800" fill="${ink}" font-family="ui-rounded,system-ui,sans-serif">?</text>`;
-  else if (EMBLEM_TEXT[t]) emblem = `<text x="60" y="${t === 7 ? 71 : 68}" text-anchor="middle" font-size="${t === 7 ? 28 : 21}" font-weight="800" fill="${ink}" font-family="ui-rounded,system-ui,sans-serif">${EMBLEM_TEXT[t]}</text>`;
-  else emblem = `<g transform="translate(${60 - 12 * 1.45} ${58 - 12 * 1.45}) scale(1.45)" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${(EMBLEMS[t] || '').split(/(?=M)/).map(d => `<path d="${d}"/>`).join('')}</g>`;
+  if (locked) emblem = `<text x="60" y="69" text-anchor="middle" font-size="32" font-weight="800" fill="${ink}" font-family="ui-rounded,system-ui,sans-serif">?</text>`;
+  else if (EMBLEM_TEXT[t]) emblem = `<text x="60" y="66" text-anchor="middle" font-size="19" font-weight="800" fill="${ink}" font-family="ui-rounded,system-ui,sans-serif">${EMBLEM_TEXT[t]}</text>`;
+  else emblem = `<g transform="translate(${60 - 12 * 1.35} ${55 - 12 * 1.35}) scale(1.35)" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${(EMBLEMS[t] || '').split(/(?=M)/).map(d => `<path d="${d}"/>`).join('')}</g>`;
 
-  // gems and ribbon
-  if (t >= 7 && !locked) front += `<path d="M60 20 65 27 60 34 55 27Z" fill="#fff" stroke="${dark}" stroke-width="1.2"/>`;
-  if (t >= 8) front += `<path d="M30 96 40 90H80L90 96 80 102H40Z" fill="${locked ? 'var(--line)' : dark}"/><path d="M40 90H80V102H40Z" fill="${locked ? 'var(--line)' : `url(#${id}m)`}" stroke="${rim}" stroke-width="1.5"/>`;
-  // shimmer (Sub-2, Pheidippides)
-  if (t >= 10 && !locked && !reduce){
-    defs += `<clipPath id="${id}c">${plate.match(/<(path|circle)[^>]*\/>/)[0]}</clipPath>`;
-    front += `<rect x="-60" y="0" width="40" height="120" fill="url(#${id}g)" clip-path="url(#${id}c)" transform="skewX(-20)" opacity=".8">
+  if (t >= 3 && !locked) front += `<path d="M60 18 64.5 24 60 30 55.5 24Z" fill="#fff" stroke="${dark}" stroke-width="1.2"/>`;
+  if (t >= 10 && !locked && !reduce) front += `<rect x="-60" y="0" width="40" height="120" fill="url(#${id}g)" clip-path="url(#${id}c)" transform="skewX(-20)" opacity=".8">
       <animate attributeName="x" values="-60;160" dur="${prism ? 2.6 : 3.4}s" repeatCount="indefinite"/></rect>`;
-  }
-  const glow = (t >= 9 && !locked) ? `filter:drop-shadow(0 0 ${prism ? 10 : 6}px ${prism ? '#ff9ae6' : mixHex(base, '#ffffff', .2)}88)` : '';
+  const glow = (t >= 10 && !locked) ? `filter:drop-shadow(0 0 ${prism ? 10 : 6}px ${prism ? '#ff9ae6' : mixHex(base, '#ffffff', .2)}88)` : '';
   return `<svg class="lbadge" width="${size}" height="${size}" viewBox="0 0 120 120" style="${glow}" role="img" aria-label="${locked ? 'Locked league' : esc(Leagues.LEAGUES[t].name) + ' badge'}">
     <defs>${defs}</defs>${back}${plate}${emblem}${front}</svg>`;
 }
@@ -149,9 +136,15 @@ function rankHeroHtml(){
       ${jarButtonHtml()}
     </div>
     <div class="statrow">
-      <span class="stat ${s.secured ? '' : 'dim'}" title="Weeks in a row with 3+ workouts">${streakIcon(20, s.weeks > 0)}<b>${s.weeks}</b> wk${s.boost ? `<small>+${s.boost}% XP</small>` : ''}</span>
-      <span class="stat">${xpIcon(20)}<b>+${nf(wkXp)}</b><small>this week</small></span>
-      <span class="stat"><b>${s.n}</b>/3<small>${s.secured ? 'streak safe' : 'for the streak'}</small></span>
+      <div class="stat ${s.secured ? '' : 'dim'}" title="Weeks in a row with 3+ workouts">
+        <div class="sv">${streakIcon(22, s.weeks > 0)}<b>${s.weeks}</b><span>week${s.weeks === 1 ? '' : 's'}</span>${s.boost ? `<em>+${s.boost}% XP</em>` : ''}</div>
+        <div class="dots" aria-label="${Math.min(s.n, 3)} of 3 workouts this week">${[0, 1, 2].map(i => `<i class="${i < s.n ? 'on' : ''}"></i>`).join('')}
+          <small>${s.secured ? 'Streak safe this week' : `${s.n}/3 this week`}</small></div>
+      </div>
+      <div class="stat">
+        <div class="sv"><b>+${nf(wkXp)}</b>${xpIcon(22)}</div>
+        <small>XP this week</small>
+      </div>
     </div>
     ${c && !c.safe ? `<div class="minline ${c.earned >= c.need || c.paused || c.grace ? 'ok' : ''}">${minimumText(c)}${!(c.earned >= c.need || c.paused || c.grace) ? `, ${daysLeft()} day${daysLeft() > 1 ? 's' : ''} left` : ''}</div>` : ''}`;
 }
@@ -224,7 +217,7 @@ function viewLeague(){
     <p>Every workout earns XP. Each level costs more XP than the last, and every five levels is a new league: ${LGS.length} leagues, ${Leagues.MAX_LEVEL} levels.</p>
     <p>From Fartlek up, each league has a <b>weekly minimum</b>. Finish a week (Monday to Sunday) below it and you lose that minimum. A week with <b>no workouts at all</b> also costs ${p.detrainPct}% of your XP, the way fitness fades. Lose enough and you drop a level, and eventually a league.</p>
     <p>Protections: this week is never penalised until it's over; Lace-Up and Shuffler have no penalties; your first ${p.graceWeeks} weeks in a newly reached league are minimum-free; and up to ${p.pauseWeeks} weeks a year can be paused.</p>
-    <p>Steady training settles you in the league whose minimum it can hold, so climbing means training more, not just training longer.</p></details>`;
+    <p>Steady training settles you in the league whose minimum it can hold, so climbing means training more, not just training longer.</p></details>${poweredByStrava()}`;
   return html;
 }
 

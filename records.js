@@ -2,7 +2,7 @@
    Vitamin Me — personal records and vitamin collection (pure functions)
    Input:  activities (with Strava best efforts), the scoring ledger, params.
    Output: current records, PR bonus events, vitamins (counts, progress) and a
-           chronological collection log. Vitamins are achievements: they never affect points. Everything is re-derived from history, so
+           chronological collection log. Vitamins are achievements: they never affect XP. Everything is re-derived from history, so
            editing parameters re-evaluates records and unlocks consistently.
    Loaded in the browser as globalThis.Records; requireable in Node for tests.
    ================================================================ */

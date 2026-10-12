@@ -128,6 +128,66 @@
   @keyframes fadein{from{opacity:0}}
   @keyframes fadeout{to{opacity:0}}
   @media (prefers-reduced-motion:reduce){.drop,.celebrate .lid,.cel-card,.celebrate{animation:none}}
+  /* XP, streak and rank */
+  .ico{display:inline-block;vertical-align:-3px;flex:none}
+  .rankhero{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin:4px 0 12px}
+  .rbadge{display:block;line-height:0}
+  .rinfo{text-decoration:none;min-width:0}
+  .rname{font-family:var(--round);font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.3px}
+  .rlvl{color:var(--muted);font-size:13px;margin:1px 0 6px}
+  .xpbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+  .xpbar.big{height:14px;border-radius:7px;width:100%;margin-top:14px}
+  .xpbar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f5b400,var(--accent))}
+  .xpbar i.fill{width:0;animation:xpfill 1.1s .35s cubic-bezier(.2,.8,.2,1) forwards}
+  @keyframes xpfill{to{width:var(--to)}}
+  .xpnums{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+  .xpnums b{color:var(--text);font-family:var(--round)}
+  .xpnums span{margin-left:auto}
+  .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:9px 10px;font-size:13px;color:var(--muted)}
+  .stat b{font-family:var(--round);font-size:19px;color:var(--text);font-variant-numeric:tabular-nums}
+  .stat small{flex-basis:100%;font-size:12px;margin-top:-2px}
+  .stat.dim .ico{opacity:.55}
+  .minline{margin-top:8px;font-size:13px;color:var(--hr);padding-left:2px}
+  .minline.ok{color:var(--muted)}
+  .pts .ico,.xpinl .ico{margin-right:2px;vertical-align:-2px}
+  .lghero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:6px 0 4px}
+  .lgname{font-family:var(--round);font-size:32px;font-weight:850;letter-spacing:-.6px;margin-top:6px}
+  .lgsub{color:var(--muted);font-size:14px}
+  .lgblurb{font-size:14px;margin-top:6px;max-width:30ch}
+  .lghero .xpnums{width:100%}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:8px}
+  .muted{color:var(--muted);font-size:13px}
+  .wkrow{display:flex;justify-content:space-between;align-items:center}
+  .wkrow b{font-family:var(--round);font-size:20px;margin:0 3px}
+  .minbar{position:relative;height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+  .minbar i{display:block;height:100%;background:var(--hr);border-radius:5px}
+  .minbar i.ok{background:var(--accent)}
+  .nextlg{grid-template-columns:auto 1fr;align-items:center;gap:14px}
+  .nextlg .t,.rung .t{font-weight:700}
+  .ladder{display:grid;gap:2px}
+  .rung{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:6px 8px;border-radius:12px}
+  .rung.here{background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+  .rung.locked .t{color:var(--muted)}
+  .weeks{margin-top:8px}
+  .wkhist{display:grid;grid-template-columns:56px 1fr auto;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:baseline}
+  .wkhist .pos{color:var(--text);font-weight:650;margin-right:8px}
+  .wkhist .neg{color:var(--hr);margin-right:8px}
+  .wkhist .tag{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--muted)}
+  .how{margin-top:22px;color:var(--muted);font-size:14px}
+  .how summary{color:var(--text);font-weight:650;cursor:pointer}
+  .btn[disabled]{opacity:.5}
+  .rankcel .cel-card{overflow:hidden}
+  .rk-badge{position:relative;display:grid;place-items:center;margin:4px auto 2px}
+  .rk-badge .lbadge{position:relative;animation:badgepop .7s cubic-bezier(.2,1.4,.3,1) both}
+  .rankcel.drop .rk-badge .lbadge{animation:badgedrop .8s ease both;filter:grayscale(.35)}
+  .burst{position:absolute;width:240px;height:240px;border-radius:50%;background:repeating-conic-gradient(color-mix(in srgb,var(--accent) 40%,transparent) 0 10deg,transparent 10deg 20deg);
+    mask:radial-gradient(circle,#000 30%,transparent 70%);-webkit-mask:radial-gradient(circle,#000 30%,transparent 70%);animation:spin 14s linear infinite,fadein .6s ease both}
+  .cel-rank{font-family:var(--round);font-size:22px;font-weight:800}
+  .rankcel .xpbar{margin:12px 0 0}
+  @keyframes badgepop{0%{transform:scale(.2) rotate(-25deg);opacity:0}100%{transform:none;opacity:1}}
+  @keyframes badgedrop{0%{transform:translateY(-14px);opacity:0}100%{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){.rk-badge .lbadge,.burst,.xpbar i.fill{animation:none}.xpbar i.fill{width:var(--to)}}
   .chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-size:13px;color:var(--text)}
 
   .period{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
@@ -278,7 +338,7 @@
 <nav class="dock">
   <button id="navHome" aria-label="Workouts" title="Workouts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></button>
   <button id="navProgress" aria-label="Progress" title="Progress"><svg viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(-40 12 12)"><rect x="2.5" y="8" width="19" height="8" rx="4"/><path d="M12 8v8"/></g></svg></button>
-  <button id="navShop" aria-label="Shop" title="Shop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg></button>
+  <button id="navLeague" aria-label="League" title="League"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 19.5 5v6c0 5-3.2 8.6-7.5 10.5C7.7 19.6 4.5 16 4.5 11V5Z"/><path d="m12 7.5 1.4 2.9 3.1.4-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.4Z"/></svg></button>
   <button id="navSync" class="go" aria-label="Sync from Strava" title="Sync from Strava"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20.5V16h-4.5"/></svg></button>
   <button id="navSettings" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></button>
 </nav>
@@ -286,12 +346,13 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="scoring.js"></script>
+<script src="leagues.js"></script>
 <script src="territory.js"></script>
 <script src="ghost.js"></script>
 <script src="records.js"></script>
 <script src="jar.js"></script>
 <script src="race.js"></script>
-<script src="shop.js"></script>
+<script src="league-ui.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

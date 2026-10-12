@@ -14,30 +14,35 @@
     ['modPct',       40,  'Effort zone starts at',             '% HRR','Heart-rate zones', 1],
     ['vigPct',       60,  'Vigorous zone starts at',           '% HRR','Heart-rate zones', 1],
 
-    ['blockMin',     10,  'Block length',                      'min',  'Effort points', 1],
-    ['blockPts',     10,  'Points per block',                  'pts',  'Effort points', 1],
-    ['bonusMin',     30,  'Bonus block length',                'min',  'Effort points', 1],
-    ['bonusPts',     25,  'Bonus points',                      'pts',  'Effort points', 1],
-    ['vigMult',     1.5,  'Vigorous minutes count as',         '×',    'Effort points', 0.1],
-    ['dipSec',       60,  'Allowed dip below zone',            'sec',  'Effort points', 5],
-    ['dailyCapMin',  90,  'Daily effort cap',                  'min',  'Effort points', 5],
+    ['blockMin',     10,  'Block length',                      'min',  'Effort XP', 1],
+    ['blockPts',     10,  'XP per block',                  'XP',   'Effort XP', 1],
+    ['bonusMin',     30,  'Bonus block length',                'min',  'Effort XP', 1],
+    ['bonusPts',     25,  'Bonus XP',                      'XP',   'Effort XP', 1],
+    ['vigMult',     1.5,  'Vigorous minutes count as',         '×',    'Effort XP', 0.1],
+    ['dipSec',       60,  'Allowed dip below zone',            'sec',  'Effort XP', 5],
+    ['dailyCapMin',  90,  'Daily effort cap',                  'min',  'Effort XP', 5],
 
-    ['kmRun',         4,  'Running',                           'pts/km','Distance points', 0.5],
-    ['kmWalk',        2,  'Walking and hiking',                'pts/km','Distance points', 0.5],
-    ['kmRide',        1,  'Cycling',                           'pts/km','Distance points', 0.5],
-    ['kmOther',       2,  'Other',                             'pts/km','Distance points', 0.5],
+    ['kmRun',         4,  'Running',                           'XP/km','Distance XP', 0.5],
+    ['kmWalk',        2,  'Walking and hiking',                'XP/km','Distance XP', 0.5],
+    ['kmRide',        1,  'Cycling',                           'XP/km','Distance XP', 0.5],
+    ['kmOther',       2,  'Other',                             'XP/km','Distance XP', 0.5],
 
     ['minWorkoutMin',15,  'Counts as a workout from',          'min',  'Consistency', 1],
-    ['wk3Bonus',     15,  '3rd workout of the week',           'pts',  'Consistency', 1],
-    ['wk4Bonus',     25,  '4th workout of the week',           'pts',  'Consistency', 1],
+    ['wk3Bonus',     15,  '3rd workout of the week',           'XP',   'Consistency', 1],
+    ['wk4Bonus',     25,  '4th workout of the week',           'XP',   'Consistency', 1],
     ['streakPct',     5,  'Streak boost per 3-workout week',   '%',    'Consistency', 1],
     ['streakCapPct', 25,  'Maximum streak boost',              '%',    'Consistency', 1],
-    ['restBonus',    10,  'Rest day after 3 active days',      'pts',  'Consistency', 1],
+    ['restBonus',    10,  'Rest day after 3 active days',      'XP',   'Consistency', 1],
 
-    ['prPts',        50,  'New 1 km, 5 km, 10 km or half record', 'pts', 'Records', 5],
-    ['longestPts',   30,  'New longest run',                   'pts',  'Records', 5],
+    ['prPts',        50,  'New 1 km, 5 km, 10 km or half record', 'XP',  'Records', 5],
+    ['longestPts',   30,  'New longest run',                   'XP',   'Records', 5],
 
-    ['tilePts',       2,  'Each new territory tile',           'pts',  'Exploration', 0.5],
+    ['tilePts',       2,  'Each new territory tile',           'XP',   'Exploration', 0.5],
+
+    ['upkeepPct',   100,  'League upkeep strength',            '%',    'Leagues', 10],
+    ['detrainPct',    2,  'Detraining per week without workouts', '% XP', 'Leagues', 0.5],
+    ['graceWeeks',    2,  'Grace weeks after a promotion',     'weeks','Leagues', 1],
+    ['pauseWeeks',    6,  'Pause weeks allowed per year',      'weeks','Leagues', 1],
   ];
   const DEFAULTS = Object.fromEntries(PARAMS.map(p => [p[0], p[1]]));
 

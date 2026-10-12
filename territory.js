@@ -82,7 +82,7 @@
     return { owned, byAct, events, count: owned.size, square: maxSquare(set), area: all[0] || [], areas: all };
   }
 
-  /* Exploration points into the ledger (after the streak multiplier, like record bonuses). */
+  /* Exploration XP into the ledger (after the streak multiplier, like record bonuses). */
   function mergeIntoLedger(L, T){
     for (const e of T.events){
       const r = L.byAct[e.actId]; if (r){ r.explore = e; r.total += e.pts; }

@@ -76,7 +76,7 @@ function markSeen(){
 let celebrating = false;
 /* demo: replay with your latest collections without changing what's been seen */
 function celebrate(demo = 0){
-  if (celebrating) return;
+  if (celebrating || document.querySelector('.celebrate')) return;   // one overlay at a time
   const R = getLedger().rec; if (!R) return;
   let fresh, list;
   if (demo){
@@ -84,7 +84,7 @@ function celebrate(demo = 0){
     fresh = new Set(R.log.map((_, i) => i).slice(-n)); list = R.log.slice(-n);
   } else {
     ({ fresh, list } = unseen());
-    if (!list.length){ markSeen(); return; }         // also absorbs decreases after parameter edits
+    if (!list.length){ markSeen(); rankCelebrate(); return; }   // nothing new: rank changes next
     markSeen();
   }
   celebrating = true;
@@ -109,7 +109,7 @@ function celebrate(demo = 0){
     <h2 id="celT" class="cel-title">Congratulations!</h2>${body}
     <button class="btn go" id="celOk">${cheer}</button></div>`;
   document.body.appendChild(el);
-  const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 220); celebrating = false; document.removeEventListener('keydown', esc_); route(); };
+  const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 220); celebrating = false; document.removeEventListener('keydown', esc_); route(); if (!demo) setTimeout(rankCelebrate, 300); };
   const esc_ = e => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', esc_);
   el.addEventListener('click', e => { if (e.target === el) close(); });

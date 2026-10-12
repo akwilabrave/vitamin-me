@@ -1,6 +1,6 @@
 # Vitamin Me
 
-A personal fitness app for iPhone that turns your workouts into points, records, a vitamin collection, a territory map and a ghost to race. It reads your training from Strava, runs entirely on your phone, and costs nothing to host.
+A personal fitness app for iPhone that turns your workouts into XP, a ranked ladder of 12 leagues, records, a vitamin collection, a territory map and a ghost to race. It reads your training from Strava, runs entirely on your phone, and costs nothing to host.
 
 > Built for a Huawei Watch Fit 4 → Huawei Health → Strava setup, but it works with any device that syncs to Strava.
 
@@ -11,12 +11,12 @@ A personal fitness app for iPhone that turns your workouts into points, records,
 1. [What it is](#what-it-is)
 2. [How it works, in one picture](#how-it-works-in-one-picture)
 3. [A tour of the app](#a-tour-of-the-app)
-4. [Points: how scoring works](#points-how-scoring-works)
+4. [XP: how it's earned](#xp-how-its-earned)
 5. [Records](#records)
 6. [Vitamins: the achievement collection](#vitamins-the-achievement-collection)
 7. [Territory](#territory)
 8. [Ghost runner](#ghost-runner)
-9. [Reward shop](#reward-shop)
+9. [Levels and leagues](#levels-and-leagues)
 10. [Your data, privacy and backups](#your-data-privacy-and-backups)
 11. [Syncing with Strava](#syncing-with-strava)
 12. [Architecture](#architecture)
@@ -34,15 +34,16 @@ Vitamin Me is a **progressive web app**: a website that installs to the iPhone h
 
 It answers one question after every workout: *what did that session earn me?* The answers come in a few deliberately different forms:
 
-| Layer | What it rewards | Spendable? |
+| Layer | What it rewards | Feeds into |
 |---|---|---|
-| **Points** | Effort, distance, consistency, records, exploration | Yes, in the reward shop |
-| **Records** | Getting faster or going further | Earn bonus points |
-| **Vitamins** | Milestones and habits, collected like achievements | No, they're a collection |
-| **Territory** | Running somewhere new | Earn points per new tile |
-| **Ghost runner** | Beating your past self on the same route | No, it's a race |
+| **XP** | Effort, distance, consistency, records, exploration | Your level and league |
+| **Leagues** | Training consistently enough to climb, and to stay | 60 levels across 12 leagues, which you can also lose |
+| **Records** | Getting faster or going further | Bonus XP |
+| **Vitamins** | Milestones and habits, collected like achievements | Nothing; they're a collection |
+| **Territory** | Running somewhere new | XP per new tile |
+| **Ghost runner** | Beating your past self on the same route | A race, and a vitamin |
 
-Everything is **derived from your workout history**. Nothing is stored as "you have 948 points"; the app recalculates it from your workouts every time. That's why you can change any scoring rule and your whole history is re-scored consistently.
+Everything is **derived from your workout history**. Nothing is stored as "you are level 13"; the app replays your workouts every time. That's why you can change any rule and your whole history is re-scored consistently.
 
 ---
 
@@ -63,7 +64,7 @@ flowchart LR
 3. The app fetches the details it needs (heart rate, best efforts, GPS route), stores them on the phone, and runs its engines: scoring, records, vitamins, territory and ghost matching.
 4. Everything you see is computed on the phone, from that local data.
 
-GitHub Pages only serves the app's code. Your workouts, tokens and shop never go there.
+GitHub Pages only serves the app's code. Your workouts, tokens and settings never go there.
 
 ---
 
@@ -73,30 +74,31 @@ The bottom bar has five buttons:
 
 | Icon | Tab | What's there |
 |---|---|---|
-| Pulse line | **Workouts** | Your point balance, the vitamin jar, weekly and monthly running, a savings goal, and the filterable workout list |
+| Pulse line | **Workouts** | Your league badge, level and XP bar, streak, the vitamin jar, weekly and monthly running, and the filterable workout list |
 | Capsule | **Progress** | The vitamin jar and collection, the territory card, and your records |
-| Bag | **Shop** | Rewards you've set up, your spendable balance, and redemption history |
+| Shield | **League** | Your badge and rank, this week's minimum, the next league, the ladder, XP history and pause weeks |
 | Arrows | **Sync** | Fetches new workouts from Strava (asks first) |
 | Sliders | **Settings** | Appearance, Strava, goals, scoring rules, backup and data |
 
 ### Workouts (home)
-- **Points balance:** what you can spend. Below it: this week's points, progress toward the 3-workout streak, and the current streak boost.
+- **Rank:** your league badge, league and division (e.g. *Fartlek III*), level and an XP bar to the next level.
+- **Status row:** your streak (pulse-flame icon, weeks in a row with 3+ workouts, and the XP boost it gives), XP earned this week, and progress toward this week's 3 workouts. If your league has a weekly minimum, a line under it says how much is left to hold your league.
 - **Vitamin jar** (top right): one capsule for every vitamin you've collected. Tap it to open Progress.
 - **Running this week / this month:** with a bar toward your weekly km goal.
 - **Workout list:** with filters:
   - **Type chips:** All, Runs, Walks, Rides, Strength, Other. Only the types you have are shown.
   - **Period:** All time, This week, This month, 30 days, This year.
   - **Show:** Everything, Records, Ghost wins, New tiles, With route.
-  - **Sort:** Newest, Oldest, Distance, Duration, Points, Pace, Heart rate.
+  - **Sort:** Newest, Oldest, Distance, Duration, XP, Pace, Heart rate.
   - **Summary:** a line totals the filtered set. Choices are remembered.
 
 ### A workout
 Tap any workout to see:
 - **Map:** the route, with any territory tiles that run claimed.
 - **Stats:** distance, moving time, pace or speed, calories, average and max heart rate, elevation.
-- **Points breakdown:** every line that earned points (effort blocks, distance, streak boost, consistency, records, exploration).
+- **XP breakdown:** every line that earned XP (effort blocks, distance, streak boost, consistency, records, exploration).
 - **Ghost runner card:** if you've run this route before.
-- **Heart-rate chart:** with your effort zone shaded, so you can see where points were earned.
+- **Heart-rate chart:** with your effort zone shaded, so you can see where XP was earned.
 - **Kilometre splits:** for runs and walks.
 
 ### Progress
@@ -104,14 +106,14 @@ The vitamin jar, the full collection, the territory summary and your records.
 
 ---
 
-## Points: how scoring works
+## XP: how it's earned
 
-Points are built from five ingredients. Each is designed to reward a *different* behaviour, so the same effort isn't paid twice.
+XP (the hexagon-and-bolt icon) is built from five ingredients. Each is designed to reward a *different* behaviour, so the same effort isn't paid twice.
 
 | Ingredient | Rewards | Default |
 |---|---|---|
-| Effort | Sustained time with your heart rate in the effort zone | 10 pts per 10 continuous minutes, +25 per 30 |
-| Distance | Volume | 4 pts/km running, 2 walking, 1 cycling |
+| Effort | Sustained time with your heart rate in the effort zone | 10 XP per 10 continuous minutes, +25 per 30 |
+| Distance | Volume | 4 XP/km running, 2 walking, 1 cycling |
 | Consistency | Showing up regularly | +15 for the week's 3rd workout, +25 for the 4th, streak boost |
 | Records | Getting faster or going further | +50 per beaten record, +30 per new longest run |
 | Exploration | Running somewhere new | +2 per new territory tile |
@@ -155,7 +157,7 @@ with the rate set by activity type (running 4, walking and hiking 2, cycling 1, 
 
 - A workout counts toward consistency if it's at least **15 minutes** long.
 - The week's **3rd** workout earns **+15** and the **4th** earns **+25**. After that the bonuses stop on purpose.
-- **Streak boost:** every *consecutive previous* week with 3+ workouts adds **+5%** to this week's effort and distance points, up to **+25%**:
+- **Streak boost** (the pulse-flame icon): every *consecutive previous* week with 3+ workouts adds **+5%** to this week's effort and distance XP, up to **+25%**:
 
 $$m = 1 + \frac{\min(25,\ 5 \cdot n_{\text{streak}})}{100}$$
 
@@ -175,7 +177,7 @@ $$P_{\text{distance}} = 4 \cdot 5 = 20 \qquad\Rightarrow\qquad P = 75$$
 
 ### Everything is adjustable
 
-**Settings → Scoring** has a page per group (heart-rate zones, effort, distance, consistency, records, exploration). Changed values are outlined, each section can be reset, and **any change re-scores your entire history immediately**.
+**Settings → XP and leagues** has a page per group (heart-rate zones, effort, distance, consistency, records, exploration, leagues). Changed values are outlined, each section can be reset, and **any change re-scores your entire history immediately**.
 
 ---
 
@@ -190,13 +192,13 @@ Records come from Strava's **best efforts**: the fastest 1 km, 5 km, 10 km and h
 | Most running in a week | shown only |
 | Longest streak | shown only |
 
-The **first** time you run a distance, it sets the record without a bonus. Only *beating* a record pays, so points can't be earned just by covering a distance once.
+The **first** time you run a distance, it sets the record without a bonus. Only *beating* a record pays, so XP can't be farmed just by covering a distance once.
 
 ---
 
 ## Vitamins: the achievement collection
 
-Vitamins are **achievements, not currency**. They never add points. Each type has its own colour; every capsule pairs that colour with your accent colour.
+Vitamins are **achievements, not currency**. They never add XP. Each type has its own colour; every capsule pairs that colour with your accent colour.
 
 Most can be collected **many times**, and the jar fills up as you do. Three are one-off milestones.
 
@@ -236,7 +238,7 @@ $$\frac{40\,075\,017 \text{ m} \cdot \cos(\text{latitude})}{2^{17}} \approx 305.
 
 across, which is about **275 m in Pretoria**. The grid works anywhere on Earth, with no map lookups.
 
-- **Claiming:** any route that passes through a tile you've never visited **claims** it, worth **+2 points**. Running your usual loop again earns nothing new, which is the point: it pushes you to explore.
+- **Claiming:** any route that passes through a tile you've never visited **claims** it, worth **+2 XP**. Running your usual loop again earns nothing new, which is the point: it pushes you to explore.
 - **Tracing:** routes are traced at quarter-tile resolution. Gaps longer than 2 km (GPS dropouts) aren't filled in.
 - **Stats:**
   - **Tiles claimed** and **new this week**.
@@ -269,25 +271,70 @@ The comparison uses **elapsed** time, so stops count, as they would in a real ra
 
 ---
 
-## Reward shop
+## Levels and leagues
 
-Your **spendable balance** is:
+XP drives a ranked ladder: **60 levels in 12 leagues** of five divisions each (e.g. *Hill Repeater IV*). Each league has its own badge, and the badges get grander as you climb: from a plain grey disc, through metal shields, to winged crests, then laurel wreaths and a crown, and finally an animated prismatic crest. Only your current league and the **next one** are revealed; everything above stays hidden until it's next.
 
-$$\text{balance} = \text{points earned} - \text{points spent}$$
+| # | League | Levels | XP to enter | Weekly minimum |
+|---|---|---|---|---|
+| 1 | Lace-Up | 1–5 | 0 | none |
+| 2 | Shuffler | 6–10 | 380 | none |
+| 3 | Fartlek | 11–15 | 1,490 | 40 |
+| 4 | Strider | 16–20 | 3,900 | 70 |
+| 5 | Hill Repeater | 21–25 | 8,080 | 100 |
+| 6 | Negative Split | 26–30 | 14,490 | 140 |
+| 7 | Lactate | 31–35 | 23,550 | 190 |
+| 8 | VO₂ Max | 36–40 | 35,660 | 250 |
+| 9 | Sub-3 | 41–45 | 51,190 | 320 |
+| 10 | Comrades | 46–50 | 70,500 | 400 |
+| 11 | Sub-2 | 51–55 | 93,960 | 500 |
+| 12 | Pheidippides | 56–60 | 121,920 | 600 |
 
-**The rule that makes it work:** only list things you'd buy anyway, and don't buy them until you've earned the points. That turns points into a gate on real purchases.
+### The level curve
 
-- **Suggested rewards** feed back into running, in three groups:
-  - **Fuel and recovery:** post-run smoothie, breakfast after a long run, protein, foam roller, sports massage.
-  - **Kit upgrades:** socks, cap, flasks, shorts or top, running shoes, massage gun.
-  - **Races and routes:** a trail run somewhere new, 10 km and half-marathon entries, a race in another city.
-- **Costs in weeks of training:** suggested costs are expressed in weeks, converted using your average weekly points over the last 4 completed weeks (300 a week until there's enough history). Every cost is editable.
-- **Reward options:** each reward can be one-off or repeatable, and one can be your **savings goal**, shown on the home screen with progress and time to go.
-- **Redeeming:** asks for confirmation, and every redemption can be **undone** from the history.
+Each level costs more than the one before:
 
-The shop is a first version; how points translate into rewards is still open (see [Open questions](#open-questions-and-ideas)).
+$$\text{XP}(L \rightarrow L{+}1) = 50 + 5.5\,(L-1)^{1.75} \quad\text{(rounded to 10)}$$
 
----
+That's 50 XP for the first level, about 1,600 by level 25, and about 7,000 near the top: 147,740 XP to reach level 60.
+
+### Losing XP
+
+XP reflects *current* training, not just history, so it can go down. Two rules apply to every **completed** week (Monday to Sunday):
+
+1. **Weekly minimum.** From Fartlek up, each league has a weekly minimum (table above). Finish a week below it and you **lose that minimum**. The rule is deliberately all-or-nothing: losing only the shortfall would let steady low training climb forever.
+2. **Detraining.** A week with **no workouts at all** also costs **2% of your XP**, the way fitness fades.
+
+Losing XP across a level boundary drops you a level; dropping below a league's first level drops the league.
+
+**Protections:**
+- **Week-end only:** the current week is never penalised until it's over.
+- **Safe start:** Lace-Up and Shuffler have no penalties.
+- **Grace weeks:** the first 2 weeks after reaching a league are minimum-free.
+- **Pause weeks:** pause up to 6 weeks a year for injury, illness or exams, with no minimum and no detraining. Only this week or last week can be paused.
+- **Floor:** XP never goes below 0.
+
+### Balance
+
+Because missing the minimum costs the whole minimum, **steady training settles in the league whose minimum it can hold**, knocking on the next league's door. Climbing further means training more, not just training longer. Simulated over years of steady training:
+
+| Steady weekly XP | Roughly | Settles in |
+|---|---|---|
+| ~70 | 2 easy runs | Strider / Hill Repeater |
+| ~150 | 3 runs of 5 km | Negative Split / Lactate |
+| ~300 | 4 runs with a long run | VO₂ Max / Sub-3 |
+| ~450 | 5 runs, ~35 km | Comrades / Sub-2 |
+| 600+ for about 4 years | serious training | Pheidippides |
+
+Your rank is placed by replaying your whole history, so the first time you open the League tab you land where your past year honestly puts you.
+
+### Celebrations
+
+Placement, level-ups (XP bar fills), promotions (badge reveal with a sunburst) and drops (a calm card explaining what cost the XP) each get their own card. Re-entering a league you'd dropped from says *"Back in …"* instead of a full promotion. Vitamin celebrations come first, then rank changes.
+
+### Tuning
+
+**Settings → XP and leagues → Leagues** adjusts minimum strength (%), detraining (%), grace weeks and pause weeks per year. The level curve and league thresholds are fixed, so the top can't be reached by changing settings.
 
 ## Your data, privacy and backups
 
@@ -297,12 +344,11 @@ The shop is a first version; how points translate into rewards is still open (se
 |---|---|---|
 | Strava Client ID and Secret, access tokens | localStorage | Only to Strava, to sign in |
 | Workouts, heart rate, routes | localStorage + IndexedDB | Never |
-| Shop, redemptions, settings | localStorage | Only in backup files you save yourself |
+| Settings, XP rules, pause weeks | localStorage | Only in backup files you save yourself |
 | Map tiles | Fetched from OpenStreetMap | Only the map area being viewed |
 
 - **Persistent storage:** the app asks iOS to protect its storage from automatic clearing (see **Settings → Backup and data**). Deleting the app from the home screen deletes its data.
-- **Backups:** **Save backup** opens the share sheet, so you can save the file to iCloud Drive or Files. It holds the shop, redemptions, scoring settings and appearance, but **not** the Strava secret. Workouts aren't included, because they re-sync from Strava. **Restore from backup file** brings everything back.
-- **Backup reminder:** a card appears on the home screen when the shop has changed and the last backup is more than 7 days old.
+- **Backups:** **Save backup** opens the share sheet, so you can save the file to iCloud Drive or Files. It holds your settings, XP and league rules, pause weeks and appearance, but **not** the Strava secret. Workouts aren't included, because they re-sync from Strava. **Restore from backup file** brings everything back.
 - **Sharing with friends:** each person installs from the same URL and connects their own Strava. Their data lives only on their phone; nothing is shared or stored centrally.
 
 ---
@@ -326,7 +372,7 @@ The shop is a first version; how points translate into rewards is still open (se
 
 1. **Static and serverless.** Plain HTML, CSS and JavaScript, no build step and no framework. It is hosted free on GitHub Pages.
 2. **Pure engines, thin UI.** Scoring, records, territory and ghost matching are pure functions in their own files: data in, results out, no DOM and no storage. They can be tested in Node and reasoned about in isolation.
-3. **Derived, not stored.** Points, records, vitamins, territory and ghost matches are all recomputed from workout history. Only raw inputs (workouts, streams, your settings, your shop) are stored, so changing a rule can never leave stale numbers behind.
+3. **Derived, not stored.** XP, levels, leagues, records, vitamins, territory and ghost matches are all recomputed from workout history. Only raw inputs (workouts, streams, your settings and pause weeks) are stored, so changing a rule can never leave stale numbers behind.
 4. **Cache the expensive parts.** Downloaded streams are cached in IndexedDB. Effort blocks (which depend only on heart rate and zone settings) are cached with a signature of those settings, and recomputed automatically when the settings change. Territory tiles are cached per workout.
 5. **App-shell layout.** Only the content area scrolls; the bottom bar sits outside it. That keeps the bar pinned on iOS, where rubber-band scrolling otherwise moves fixed elements.
 
@@ -338,17 +384,19 @@ flowchart TD
     fx[Effort cache<br/>vm.fx] --> L
     tiles[Tiles cache<br/>vm.tiles] --> T[Territory.compute<br/>claimed tiles, squares, areas]
     acts --> T
-    T -->|exploration points| L2[Ledger + exploration]
+    T -->|exploration XP| L2[Ledger + exploration]
     L --> L2
     tiles --> G[Ghost.index<br/>same-route matches]
     acts --> G
     L2 --> R[Records.compute<br/>records, vitamins, jar log]
     G --> R
     T --> R
-    R -->|record points| LF[Final ledger]
+    R -->|record XP| LF[Final ledger<br/>XP earned per week]
     L2 --> LF
-    LF --> UI[Views: Workouts, Progress, Shop, ...]
-    shop[Shop<br/>vm.shop] --> UI
+    LF --> LG[Leagues.replay<br/>minimums, detraining, grace, pauses]
+    pauses[Pause weeks<br/>vm.cfg] --> LG
+    LG --> UI[Views: Workouts, League, Progress, ...]
+    LF --> UI
 ```
 
 `getLedger()` in `app.js` runs this pipeline once and caches the result until data or settings change.
@@ -360,12 +408,13 @@ The page loads plain scripts in dependency order. The pure engines attach themse
 ```
 leaflet.min.js        maps (CDN)
 scoring.js            → Scoring
+leagues.js            → Leagues     (uses Scoring)
 territory.js          → Territory   (uses Scoring)
 ghost.js              → Ghost
 records.js            → Records     (uses Scoring)
 jar.js                jar + celebration UI
 race.js               ghost race UI
-shop.js               shop UI
+league-ui.js          badges, XP and streak icons, League page, rank celebrations
 app.js                storage, Strava, sync, views, router, settings
 ```
 
@@ -380,7 +429,7 @@ The app is a single page with hash routes:
 | `#/ghost/<id>?vs=prev\|best` | Ghost race |
 | `#/progress` | Progress |
 | `#/territory` | Territory map |
-| `#/shop`, `#/shop/suggest`, `#/shop/edit/<id\|new>` | Shop, suggestions, edit reward |
+| `#/league` | League |
 | `#/settings` | Settings menu |
 | `#/settings/appearance`, `/strava`, `/goals`, `/scoring`, `/scoring/<group>`, `/data` | Settings pages |
 
@@ -390,13 +439,12 @@ The app is a single page with hash routes:
 
 | Key | Contents |
 |---|---|
-| `vm.cfg` | Settings: theme, accent, weekly goal, scoring parameters, Strava Client ID/Secret |
+| `vm.cfg` | Settings: theme, accent, weekly goal, XP and league parameters, pause weeks, Strava Client ID/Secret |
 | `vm.tok` | Strava access and refresh tokens, athlete name |
 | `vm.acts` | Workout summaries (one compact record per workout) |
-| `vm.meta` | Sync markers, last backup time, vitamins already celebrated |
+| `vm.meta` | Sync markers, last backup time, vitamins and rank already celebrated |
 | `vm.fx` | Effort-block cache, with the settings signature it was computed for |
 | `vm.tiles` | Territory tiles per workout, and whether they came from the full or simplified route |
-| `vm.shop` | Rewards, redemptions, savings goal |
 | `vm.list` | Workout-list filters (per-phone convenience) |
 
 **IndexedDB** (database `vitamin-me`, store `kv`), for larger data:
@@ -415,13 +463,14 @@ The app is a single page with hash routes:
 vitamin-me/
 ├── index.html        Page shell, all styles and themes, dock, script tags
 ├── app.js            The application: storage, Strava auth and sync, views, router, settings
-├── scoring.js        Points engine (pure)
+├── scoring.js        XP engine (pure)
+├── leagues.js        Levels and leagues engine (pure)
 ├── records.js        Records and vitamins engine (pure)
 ├── territory.js      Territory grid engine (pure)
 ├── ghost.js          Same-route matching and race comparison (pure)
 ├── jar.js            Vitamin jar drawing and the collection celebration
 ├── race.js           Ghost race page and replay
-├── shop.js           Reward shop
+├── league-ui.js      Badges, icons, League page, rank celebrations
 ├── sw.js             Service worker: offline app shell
 ├── manifest.json     Home-screen install metadata
 ├── icon-180.png      Apple touch icon
@@ -434,13 +483,14 @@ vitamin-me/
 |---|---|---|
 | `index.html` | Shell and styles | Theme tokens for light and dark, accent colour variables, every component's CSS, the bottom bar, and a tiny pre-paint script that applies your saved theme before anything renders (no flash). |
 | `app.js` | Application core | localStorage and IndexedDB wrappers; theme handling; Strava OAuth (including the Safari-code fallback); incremental sync with a request budget; detail, heart-rate and race stream fetching and caching; the effort and tile caches; `getLedger()` pipeline; all main views (home, workout detail, progress, territory, settings); workout filters; maps; HR chart; backup and restore; router. |
-| `scoring.js` | Pure engine | `PARAMS` (every tunable number, which also generates the Scoring settings pages), heart-rate zones, effort-block detection from HR streams, and `ledger()`: per-workout breakdowns, weekly totals, streak multiplier, daily cap and rest bonus. |
+| `scoring.js` | Pure engine | `PARAMS` (every tunable number, which also generates the XP and leagues settings pages), heart-rate zones, effort-block detection from HR streams, and `ledger()`: per-workout breakdowns, weekly totals, streak multiplier, daily cap and rest bonus. |
 | `records.js` | Pure engine | Record tracking from best efforts and distances, PR bonus events, the vitamin definitions (colour, rule, repeatability), collection counts, progress to the next one, and the chronological log that fills the jar. |
-| `territory.js` | Pure engine | Zoom-17 tile maths, route-to-tiles tracing, first-visit claiming, exploration points, biggest-square search and connected areas. |
+| `territory.js` | Pure engine | Zoom-17 tile maths, route-to-tiles tracing, first-visit claiming, exploration XP, biggest-square search and connected areas. |
 | `ghost.js` | Pure engine | Same-route index (tile Jaccard similarity and distance tolerance), interpolation of time at distance and distance at time, and the race comparison (gap curve, km splits, biggest lead or deficit). |
 | `jar.js` | UI | Deterministic capsule layout, jar SVG, the home-screen jar button, tracking which collections have been celebrated, and the celebration card with drop animation and replay. |
 | `race.js` | UI | Ghost runner card on workouts, the race page, verdict and race story, gap chart, splits table, and the animated replay on the map. |
-| `shop.js` | UI | Balance, rewards list, suggestions priced in weeks of training, reward editor, savings-goal card, redemption and undo. |
+| `leagues.js` | Pure engine | League definitions and weekly minimums, the level curve, `rankOf(xp)`, and `replay()`: walks every week of history applying minimums, detraining, grace and pause weeks, returning the XP timeline, rank-change events and this week's status. |
+| `league-ui.js` | UI | XP and pulse-flame streak icons, the 12 procedurally drawn league badges, the home rank hero, the League page (ladder, this week, next league, XP chart, pause weeks) and the placement, level-up, promotion and drop cards. |
 | `sw.js` | Offline | Caches the app files so the app opens without a connection. Network-first, so updates arrive immediately when online. **Bump `VERSION` whenever files change.** |
 | `manifest.json` | Install | Name, colours, icons, standalone display. |
 
@@ -489,18 +539,21 @@ const Territory = require('./territory.js');
 const Ghost = require('./ghost.js');
 const Records = require('./records.js');
 
-const L = Scoring.ledger(activities, effortCache, {});   // points
+const L = Scoring.ledger(activities, effortCache, {});   // XP earned
 L.terr = Territory.compute(activities, tiles, {});        // territory
 Territory.mergeIntoLedger(L, L.terr);
 L.ghost = Ghost.index(activities, tiles);                 // same-route matches
 const R = Records.compute(activities, L, {});             // records + vitamins
+Records.mergeIntoLedger(L, R);
+const Leagues = require('./leagues.js');
+const G = Leagues.replay(L.weeks, {}, new Date(), []);    // XP after minimums/detraining, rank
 ```
 
 **Deploy.** Push to `main`; GitHub Pages redeploys in about a minute.
 1. Bump `VERSION` in `sw.js` with every change, or phones may keep serving the cached version.
 2. On the phone, fully close and reopen the app to pick up the new version.
 
-**Adding a scoring parameter.** Add a row to `PARAMS` in `scoring.js` (`[key, default, label, unit, group, step]`). It appears in Settings automatically and is available as `p.key` in the engines.
+**Adding an XP or league parameter.** Add a row to `PARAMS` in `scoring.js` (`[key, default, label, unit, group, step]`). It appears in Settings automatically and is available as `p.key` in the engines.
 
 **Adding a vitamin.** Add an entry to `VITAMINS` in `records.js` with a colour, an `n(state)` function returning how many times it's been collected, a `next(state)` progress function, and `once: true` for one-off milestones. Track any new state in `compute()`.
 
@@ -519,9 +572,6 @@ const R = Records.compute(activities, L, {});             // records + vitamins
 
 ## Open questions and ideas
 
-- **What points mean.** Points currently gate shop rewards. Two possible directions:
-  - **A training budget:** points unlock money you've set aside.
-  - **XP and levels:** pure progression, nothing to spend.
-- **Shop revamp.** Make redeeming feel earned rather than transactional, possibly tied to goals and seasons.
-- **Monthly challenges.** One self-set target per month with a large bonus.
-- **Strength and other sports.** Scoring is run-centric; strength sessions currently earn only through heart rate.
+- **Monthly challenges.** One self-set target per month with an XP bonus.
+- **Strength and other sports.** XP is run-centric; strength sessions currently earn only through heart rate.
+- **League seasons.** An optional seasonal reset or "season best" badge, as in ranked game modes.

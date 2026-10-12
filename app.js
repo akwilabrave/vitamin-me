@@ -346,18 +346,7 @@ function viewHome(){
         <div class="lbl" style="margin-top:22px">${moN} workout${moN === 1 ? '' : 's'} this month</div></div>
     </div>`;
 
-  html += `<h2>Workouts</h2>`;
-  html += acts.slice(0, 60).map(a => {
-    const svg = a.poly ? routeSvg(a.poly) : null, d = km(a.dist), r = L.byAct[a.id];
-    const sub = [a.moving ? dur(a.moving) : null, paceOrSpeed(a), a.avgHr ? `${Math.round(a.avgHr)} bpm` : null]
-                  .filter(Boolean).map(x => `<span>${x}</span>`).join('');
-    const pts = r ? (r.pending ? `<div>scoring…</div>` : `<div class="pts">+${nf(r.total)}</div>`) : '';
-    return `<a class="act" href="#/a/${a.id}">
-      <div class="thumb">${svg || esc(typeName(a.type))}</div>
-      <div style="min-width:0"><div class="t">${esc(a.name)}</div><div class="m">${when(a.start)}</div><div class="m">${sub}</div></div>
-      <div class="r"><b>${d ? d + ' km' : '-'}</b><div>${a.kcal ? Math.round(a.kcal) + ' kcal' : a.kcal === undefined ? '' : '- kcal'}</div>${pts}</div>
-    </a>`;
-  }).join('');
+  html += `<h2>Workouts</h2>${listControlsHtml(acts)}<div id="wlist">${workoutListHtml(acts)}</div>`;
   return html;
 }
 
@@ -471,6 +460,89 @@ function drawMap(poly, freshTiles){
   L.circleMarker(pts[0], { radius: 6, color: ring, weight: 2, fillColor: css('--accent2'), fillOpacity: 1 }).addTo(map);
   L.circleMarker(pts[pts.length-1], { radius: 6, color: ring, weight: 2, fillColor: css('--hr'), fillOpacity: 1 }).addTo(map);
   map.fitBounds(line.getBounds(), { padding: [22, 22] });
+}
+
+/* ---------------- workout list: filters and sorting ----------------
+   State is a per-phone convenience (not backed up). */
+const LIST_KEY = 'vm.list', PAGE = 30;
+const TYPE_GROUPS = [
+  ['run', 'Runs', t => RUNS.has(t)], ['walk', 'Walks', t => t === 'Walk' || t === 'Hike'],
+  ['ride', 'Rides', t => /Ride$/.test(t)], ['strength', 'Strength', t => t === 'WeightTraining' || t === 'Crossfit'],
+  ['other', 'Other', t => !RUNS.has(t) && t !== 'Walk' && t !== 'Hike' && !/Ride$/.test(t) && t !== 'WeightTraining' && t !== 'Crossfit'],
+];
+const PERIODS = [['all', 'All time'], ['week', 'This week'], ['month', 'This month'], ['30', '30 days'], ['year', 'This year']];
+const SORTS = [['new', 'Newest'], ['old', 'Oldest'], ['dist', 'Distance'], ['time', 'Duration'],
+               ['pts', 'Points'], ['pace', 'Pace'], ['hr', 'Heart rate']];
+const HIGHLIGHTS = [['any', 'Everything'], ['pr', 'Records'], ['ghost', 'Ghost wins'], ['tiles', 'New tiles'], ['route', 'With route']];
+const listState = () => ({ type: 'all', period: 'all', sort: 'new', hl: 'any', n: PAGE, ...store.get(LIST_KEY, {}) });
+
+function filteredActs(acts){
+  const f = listState(), L = getLedger(), now = new Date();
+  const from = f.period === 'week' ? new Date(Scoring.weekKey(now) + 'T00:00:00')
+             : f.period === 'month' ? new Date(now.getFullYear(), now.getMonth(), 1)
+             : f.period === '30' ? new Date(Date.now() - 30 * 86400000)
+             : f.period === 'year' ? new Date(now.getFullYear(), 0, 1) : null;
+  const tg = TYPE_GROUPS.find(g => g[0] === f.type);
+  let xs = acts.filter(a => (!tg || tg[2](a.type)) && (!from || new Date(a.start) >= from));
+  if (f.hl === 'pr') xs = xs.filter(a => L.byAct[a.id]?.prs?.length);
+  if (f.hl === 'ghost') xs = xs.filter(a => L.ghost?.byAct[a.id]?.beatPrev);
+  if (f.hl === 'tiles') xs = xs.filter(a => L.terr?.byAct[a.id]?.fresh.length);
+  if (f.hl === 'route') xs = xs.filter(a => a.poly);
+  const pace = a => a.dist > 50 && a.moving ? a.moving / a.dist : Infinity;
+  const by = { new: (a, b) => b.start.localeCompare(a.start), old: (a, b) => a.start.localeCompare(b.start),
+    dist: (a, b) => b.dist - a.dist, time: (a, b) => b.moving - a.moving,
+    pts: (a, b) => (L.byAct[b.id]?.total || 0) - (L.byAct[a.id]?.total || 0),
+    pace: (a, b) => pace(a) - pace(b), hr: (a, b) => (b.avgHr || 0) - (a.avgHr || 0) }[f.sort] || ((a, b) => b.start.localeCompare(a.start));
+  return xs.sort(by);
+}
+function listControlsHtml(acts){
+  const f = listState(), present = TYPE_GROUPS.filter(g => acts.some(a => g[2](a.type)));
+  const opt = (list, v) => list.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('');
+  return `<div class="filters">
+    ${present.length > 1 ? `<div class="chips" role="group" aria-label="Workout type">
+      <button data-ft="all" aria-pressed="${f.type === 'all'}">All</button>
+      ${present.map(g => `<button data-ft="${g[0]}" aria-pressed="${f.type === g[0]}">${g[1]}</button>`).join('')}</div>` : ''}
+    <div class="selects">
+      <label><span>Period</span><select data-fs="period">${opt(PERIODS, f.period)}</select></label>
+      <label><span>Show</span><select data-fs="hl">${opt(HIGHLIGHTS, f.hl)}</select></label>
+      <label><span>Sort</span><select data-fs="sort">${opt(SORTS, f.sort)}</select></label>
+    </div></div>`;
+}
+function workoutListHtml(acts){
+  const f = listState(), xs = filteredActs(acts), L = getLedger();
+  const dist = xs.reduce((s, a) => s + a.dist, 0) / 1000, time = xs.reduce((s, a) => s + a.moving, 0);
+  const pts = xs.reduce((s, a) => s + (L.byAct[a.id]?.total || 0), 0);
+  const filtered = f.type !== 'all' || f.period !== 'all' || f.hl !== 'any';
+  let html = `<div class="listsum"><span><b>${xs.length}</b> workout${xs.length === 1 ? '' : 's'}</span>${dist >= 0.05 ? `<span><b>${nf(dist, 1)}</b> km</span>` : ''}
+    <span><b>${dur(time)}</b></span><span><b>+${nf(pts)}</b> pts</span>${filtered ? '<button class="linkbtn" data-freset>Clear filters</button>' : ''}</div>`;
+  if (!xs.length) return html + `<div class="empty">No workouts match these filters.</div>`;
+  html += xs.slice(0, f.n).map(a => {
+    const svg = a.poly ? routeSvg(a.poly) : null, d = km(a.dist), r = L.byAct[a.id];
+    const sub = [a.moving ? dur(a.moving) : null, paceOrSpeed(a), a.avgHr ? `${Math.round(a.avgHr)} bpm` : null]
+                  .filter(Boolean).map(x => `<span>${x}</span>`).join('');
+    const p = r ? (r.pending ? `<div>scoring…</div>` : `<div class="pts">+${nf(r.total)}</div>`) : '';
+    return `<a class="act" href="#/a/${a.id}">
+      <div class="thumb">${svg || esc(typeName(a.type))}</div>
+      <div style="min-width:0"><div class="t">${esc(a.name)}</div><div class="m">${when(a.start)}</div><div class="m">${sub}</div></div>
+      <div class="r"><b>${d ? d + ' km' : '-'}</b><div>${a.kcal ? Math.round(a.kcal) + ' kcal' : a.kcal === undefined ? '' : '- kcal'}</div>${p}</div>
+    </a>`;
+  }).join('');
+  if (xs.length > f.n) html += `<button class="btn" data-fmore>Show ${Math.min(PAGE, xs.length - f.n)} more</button>`;
+  return html;
+}
+function bindList(){
+  const acts = sorted();
+  const update = patch => {
+    store.set(LIST_KEY, { ...listState(), n: PAGE, ...patch });
+    const fl = document.querySelector('.filters'); if (fl) fl.outerHTML = listControlsHtml(acts);
+    $('wlist').innerHTML = workoutListHtml(acts); bindList();
+  };
+  document.querySelectorAll('[data-ft]').forEach(b => b.onclick = () => update({ type: b.dataset.ft }));
+  document.querySelectorAll('[data-fs]').forEach(s => s.onchange = () => update({ [s.dataset.fs]: s.value }));
+  const r = document.querySelector('[data-freset]'); if (r) r.onclick = () => update({ type: 'all', period: 'all', hl: 'any' });
+  const m = document.querySelector('[data-fmore]'); if (m) m.onclick = () => {
+    store.set(LIST_KEY, { ...listState(), n: listState().n + PAGE }); $('wlist').innerHTML = workoutListHtml(acts); bindList();
+  };
 }
 
 /* ---------------- progress: records + vitamins ---------------- */
@@ -727,7 +799,7 @@ function viewSettings(path = ''){
   return `${backTo('#/settings', 'Settings')}<div class="empty">Page not found.</div>`;
 }
 
-function rerenderSettings(){ const sc = scrollY; route(); scrollTo(0, sc); }
+function rerenderSettings(){ const v = $('view'), sc = v.scrollTop; route(); v.scrollTop = sc; }
 function bindSettings(){
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   const setTheme = patch => { setCfg({ theme: { ...(cfg().theme || {}), ...patch } }); applyTheme(); rerenderSettings(); };
@@ -843,7 +915,7 @@ function route(){
   else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); }
   else if (h === '#/territory'){ $('view').innerHTML = viewTerritory(); drawTerritory(); }
   else if (h.startsWith('#/ghost/')) viewGhost(h.slice(8));
-  else { $('view').innerHTML = viewHome(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
+  else { $('view').innerHTML = viewHome(); if ($('wlist')) bindList(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
   markNav();
 }
 function markNav(){
@@ -861,7 +933,7 @@ $('navSettings').onclick = () => { location.hash = '#/settings'; };
 $('navShop').onclick = () => { location.hash = '#/shop'; };
 $('navProgress').onclick = () => { location.hash = '#/progress'; };
 $('navSync').onclick = () => { if (!syncing && confirm('Sync your latest workouts from Strava?')) sync(); };
-window.addEventListener('hashchange', () => { route(); scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { route(); $('view').scrollTop = 0; });
 
 applyTheme();
 ensurePersistent();

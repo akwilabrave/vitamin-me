@@ -8,21 +8,25 @@
    ================================================================ */
 const SHOP_KEY = 'vm.shop';
 
+/* Suggestions feed back into training: fuel and recovery, kit upgrades, and race and route
+   experiences. Each is something a runner buys anyway; the shop just makes you earn it first.
+   [group, weeks of training, name, repeatable] */
 const SUGGESTIONS = [
-  // group, weeks of training, name
-  ['Small treats',   0.5,  'Coffee at your favourite spot'],
-  ['Small treats',   0.5,  'Takeaway meal of your choice'],
-  ['Small treats',   0.5,  'Guilt-free gaming or series night'],
-  ['Small treats',   0.75, 'New pair of running socks'],
-  ['Small treats',   1,    'A lie-in with no alarm'],
-  ['Bigger rewards', 2,    'Movie night out'],
-  ['Bigger rewards', 2,    'Sit-down meal at a restaurant'],
-  ['Bigger rewards', 2.5,  'New running cap or race belt'],
-  ['Bigger rewards', 3,    'A new game or album'],
-  ['Big goals',      6,    'Entry to a 10 km or half-marathon race'],
-  ['Big goals',      8,    'Sports massage'],
-  ['Big goals',      12,   'New running shoes'],
-  ['Big goals',      16,   'Weekend away'],
+  ['Fuel and recovery', 0.5,  'Post-run smoothie or protein shake', true],
+  ['Fuel and recovery', 1,    'Breakfast out after a weekend long run', true],
+  ['Fuel and recovery', 3,    'Tub of protein powder', true],
+  ['Fuel and recovery', 3,    'Foam roller', false],
+  ['Fuel and recovery', 8,    'Sports massage', true],
+  ['Kit upgrades',      1.5,  'A pair of proper running socks', true],
+  ['Kit upgrades',      2,    'Running cap or visor', false],
+  ['Kit upgrades',      4,    'Soft flasks or a hydration belt', false],
+  ['Kit upgrades',      5,    'New running shorts or top', true],
+  ['Kit upgrades',      12,   'New running shoes', true],
+  ['Kit upgrades',      16,   'Massage gun', false],
+  ['Races and routes',  3,    'Trail run somewhere you\'ve never run', true],
+  ['Races and routes',  6,    'Entry to a 10 km race', true],
+  ['Races and routes',  10,   'Entry to a half marathon', true],
+  ['Races and routes',  20,   'A race in another city, trip included', true],
 ];
 
 const shop = () => store.get(SHOP_KEY, { items: [], redemptions: [], goalId: null });
@@ -68,7 +72,7 @@ function viewShop(){
     <div class="pointsub"><span>Earned <b>${nf(L.total)}</b></span><span>Spent <b>${nf(spent())}</b></span><span>About <b>${nf(weeklyRate())}</b> a week</span></div>`;
 
   if (!s.items.length){
-    return html + `<div class="empty">Your shop is empty. Pick rewards you'd genuinely work for, and spend your points on them.
+    return html + `<div class="empty">Your shop is empty. List things you'd buy anyway, like new shoes or a race entry, and only buy them once you've earned the points.
       <button class="btn go" data-go="#/shop/suggest">Set up your shop</button>
       <button class="btn" data-go="#/shop/edit/new">Add your own reward</button></div>`;
   }
@@ -100,13 +104,14 @@ function viewSuggest(){
   const s = shop(), have = new Set(s.items.map(i => i.name.toLowerCase()));
   const avail = SUGGESTIONS.filter(x => !have.has(x[2].toLowerCase()));
   let html = `<button class="back" data-go="#/shop">Shop</button><h1 class="brand">Suggested rewards</h1>
-    <p class="hint">Costs are based on your recent average of about ${nf(weeklyRate())} points a week. Tick the ones you want and change any cost before adding.</p>`;
+    <p class="hint">Rewards that feed back into your running. The rule that makes it work: only list things you'd buy anyway, and don't buy them until you've earned the points.</p>
+    <p class="hint">Costs are in weeks of training at your recent average of about ${nf(weeklyRate())} points a week. Tick what fits and adjust any cost before adding.</p>`;
   if (!avail.length) return html + `<div class="empty">You've added every suggestion. Add your own rewards from the shop.</div>`;
   let grp = '';
   avail.forEach((x, n) => {
     if (x[0] !== grp){ html += `<div class="grp">${x[0]}</div>`; grp = x[0]; }
     const c = costFor(x[1]);
-    html += `<label class="sug"><input type="checkbox" data-sug="${n}" ${x[0] === 'Small treats' ? 'checked' : ''}>
+    html += `<label class="sug"><input type="checkbox" data-sug="${n}" ${x[1] <= 3 ? 'checked' : ''}>
       <span><span class="t">${esc(x[2])}</span><small>${weeksText(c)}</small></span>
       <input type="number" inputmode="numeric" class="sugcost" data-sugcost="${n}" value="${c}" aria-label="Cost in points"></label>`;
   });
@@ -155,7 +160,7 @@ function bindShop(view, id){
       document.querySelectorAll('[data-sug]').forEach(cb => {
         if (!cb.checked) return;
         const x = viewSuggest.avail[+cb.dataset.sug], c = parseInt(document.querySelector(`[data-sugcost="${cb.dataset.sug}"]`).value, 10);
-        s.items.push({ id: uid(), name: x[2], cost: c > 0 ? c : costFor(x[1]), repeatable: x[0] !== 'Big goals' });
+        s.items.push({ id: uid(), name: x[2], cost: c > 0 ? c : costFor(x[1]), repeatable: x[3] });
         n++;
       });
       if (!n){ toast('Tick at least one reward.', true); return; }

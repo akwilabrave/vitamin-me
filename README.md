@@ -18,6 +18,8 @@ Personal fitness app (installable web app) for iPhone.
 | `records.js` | Personal records and vitamin collection (pure functions; vitamins never affect points) |
 | `jar.js` | Vitamin jar and collection celebration |
 | `territory.js` | World tile grid (zoom-17 tiles): claimed tiles, biggest square, areas (pure functions) |
+| `ghost.js` | Same-route detection (tile overlap) and time-at-distance comparison (pure functions) |
+| `race.js` | Ghost race page: verdict, gap chart, splits, animated replay |
 | `shop.js` | Reward shop |
 | `sw.js` | Offline app-shell cache. Bump `VERSION` on every deploy. |
 | `manifest.json`, `icon-*.png` | Home-screen install metadata |

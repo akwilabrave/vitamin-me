@@ -23,6 +23,7 @@
     { id: 'A', color: '#df4985',   sym: 'A',   name: 'Vitamin A',   desc: 'Every new personal record',             n: s => s.prs,               next: () => null, unit: '' },
     { id: 'B1', color: '#8e62da',  sym: 'B1',  name: 'Vitamin B1',  desc: 'Every 10 workouts',                                 n: s => fl(s.workouts, 10),  next: s => [s.workouts % 10, 10], unit: 'workouts' },
     { id: 'B3', color: '#b5835a', sym: 'B3',  name: 'Vitamin B3',  desc: 'Every 100 new territory tiles',     n: s => fl(s.tiles, 100),    next: s => [s.tiles % 100, 100], unit: 'tiles' },
+    { id: 'B5', color: '#7f93ab', sym: 'B5',  name: 'Vitamin B5',  desc: 'Every time you beat your ghost on a repeated route', n: s => s.ghostWins, next: () => null, unit: '' },
     { id: 'B6', color: '#b159cf',  sym: 'B6',  name: 'Vitamin B6',  desc: 'Complete 50 workouts', once: true,                  n: s => +(s.workouts >= 50), next: s => [Math.min(s.workouts, 50), 50], unit: 'workouts' },
     { id: 'B12', color: '#cd51b8', sym: 'B12', name: 'Vitamin B12', desc: 'Complete 100 workouts', once: true,                 n: s => +(s.workouts >= 100),next: s => [Math.min(s.workouts, 100), 100], unit: 'workouts' },
     { id: 'C', color: '#ee7f2b',   sym: 'C',   name: 'Vitamin C',   desc: 'Every 4 weeks of streak (3+ workouts a week)',      n: s => s.streak4,           next: s => [s.curStreak % 4, 4], unit: 'weeks' },
@@ -48,7 +49,7 @@
     const prEvents = [], got = {}, log = [];
     const weekCount = {}, weekZone = {}, weekKm = {};
     const st = { prs: 0, workouts: 0, bestStreak: 0, curStreak: 0, streak4: 0, longestKm: 0, longestBlock: 0, runKm: 0, maxVig: 0,
-                 runs10: 0, runsHalf: 0, blocks60: 0, vig30: 0, weeks150: 0, zoneThisWeek: 0, mornings: 0, climb: 0, rests: 0, tiles: 0 };
+                 runs10: 0, runsHalf: 0, blocks60: 0, vig30: 0, weeks150: 0, zoneThisWeek: 0, mornings: 0, climb: 0, rests: 0, tiles: 0, ghostWins: 0 };
 
     const streakEnding = wk => { let n = 0, k = wk; while ((weekCount[k] || 0) >= 3){ n++; k = S.addDays(k, -7); } return n; };
     const checkUnlocks = (date, actId) => {
@@ -86,6 +87,7 @@
       for (const b of r.blocks || []){ st.longestBlock = Math.max(st.longestBlock, b.min); if (b.min >= 60) st.blocks60++; }
       st.climb += a.elev || 0;
       st.tiles += L.terr?.byAct[a.id]?.fresh.length || 0;
+      if (L.ghost?.byAct[a.id]?.beatPrev) st.ghostWins++;
 
       if (RUN.has(a.type)) {
         st.runKm += km;

@@ -160,6 +160,16 @@ async function detail(id){
   }
   return d;
 }
+/* Time, distance and position streams for ghost races (fetched on demand, cached). */
+async function raceStream(id){
+  let s = await idb.get('r' + id);
+  if (!s){
+    const r = await api(`/activities/${id}/streams?keys=time,distance,latlng&key_by_type=true`);
+    s = { t: r?.time?.data || [], d: r?.distance?.data || [], ll: r?.latlng?.data || [] };
+    if (s.t.length) await idb.set('r' + id, s);
+  }
+  return s;
+}
 async function hrStream(id){
   let s = await idb.get('h' + id);
   if (!s){
@@ -199,6 +209,7 @@ function getLedger(){
   const tiles = Object.fromEntries(Object.entries(store.get(K.tiles, {})).map(([id, t]) => [id, t.k]));
   ledgerCache.terr = Territory.compute(acts, tiles, cfg().params || {});
   Territory.mergeIntoLedger(ledgerCache, ledgerCache.terr);
+  ledgerCache.ghost = Ghost.index(acts, tiles);
   ledgerCache.rec = Records.compute(acts, ledgerCache, cfg().params || {});
   Records.mergeIntoLedger(ledgerCache, ledgerCache.rec);
   return ledgerCache;
@@ -300,7 +311,7 @@ function routeSvg(poly, size = 52){
 
 /* ---------------- views ---------------- */
 let map = null;
-function teardownMap(){ if (map){ map.remove(); map = null; } if (terrMap){ terrMap.remove(); terrMap = null; } }
+function teardownMap(){ stopRace(); if (map){ map.remove(); map = null; } if (terrMap){ terrMap.remove(); terrMap = null; } }
 const sorted = () => Object.values(store.get(K.acts, {})).sort((x,y) => y.start.localeCompare(x.start));
 
 function viewHome(){
@@ -404,7 +415,7 @@ function detailHtml(a, d, s){
       ${stat('Elevation', a.elev ? Math.round(a.elev) + ' m' : '-')}
     </div>`;
   if (d?.description) html += `<p class="hint">${esc(d.description)}</p>`;
-  html += pointsHtml(a);
+  html += pointsHtml(a) + ghostCardHtml(a);
 
   if (s?.hr?.length > 1) html += `<h2>Heart rate</h2>${hrChart(s.t, s.hr, a.avgHr)}`;
   else if (s) html += `<h2>Heart rate</h2><div class="hint">No heart-rate data recorded for this workout.</div>`;
@@ -831,6 +842,7 @@ function route(){
   else if (h.startsWith('#/shop') && routeShop(h)){}
   else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); }
   else if (h === '#/territory'){ $('view').innerHTML = viewTerritory(); drawTerritory(); }
+  else if (h.startsWith('#/ghost/')) viewGhost(h.slice(8));
   else { $('view').innerHTML = viewHome(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
   markNav();
 }

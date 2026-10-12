@@ -269,7 +269,8 @@ async function sync(){
 /* ---------------- formatting ---------------- */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const nf = (n, dp = 0) => Number(n).toLocaleString('en-ZA', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+const nf = (n, dp = 0) => Number(n).toLocaleString('en-GB', {   // dot decimals everywhere, whatever the phone's region
+  minimumFractionDigits: dp, maximumFractionDigits: dp });
 const km = m => m >= 50 ? nf(m/1000, 2) : null;
 function dur(s){
   s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;

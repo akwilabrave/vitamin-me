@@ -1,6 +1,6 @@
 "use strict";
 /* ================================================================
-   Vitamin Me — personal Strava client (static PWA, no backend)
+   Doppel — you vs you. Personal Strava client (static PWA, no backend)
    Data flow: Huawei watch → Huawei Health → Strava → Strava API → this page
    Storage:   localStorage = config, tokens, activity summaries, effort cache
               IndexedDB    = per-activity detail + HR streams
@@ -22,7 +22,7 @@ const store = {
 const idb = (() => {
   let p;
   const db = () => p ??= new Promise((res, rej) => {
-    const r = indexedDB.open('vitamin-me', 1);
+    const r = indexedDB.open('vitamin-me', 1);   // name kept from the first version so existing caches survive
     r.onupgradeneeded = () => r.result.createObjectStore('kv');
     r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
   });
@@ -42,8 +42,8 @@ const params = () => ({ ...Scoring.DEFAULTS, ...(cfg().params || {}) });
 
 /* ---------------- theme ---------------- */
 const ACCENTS = [
-  ['Vitamin orange', '#ff8a1f'], ['Teal', '#20b2a6'], ['Berry', '#e0457b'],
-  ['Sky', '#3d8bfd'], ['Violet', '#8b5cf6'], ['Gold', '#e2b13c']
+  ['Doppel violet', '#7c5cff'], ['Orange', '#ff8a1f'], ['Teal', '#20b2a6'],
+  ['Berry', '#e0457b'], ['Sky', '#3d8bfd'], ['Gold', '#e2b13c']
 ];
 function hexRgb(h){ const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
 function luminance(h){ return hexRgb(h).map(c => { c /= 255; return c <= .03928 ? c/12.92 : ((c+.055)/1.055) ** 2.4; })
@@ -54,7 +54,7 @@ function hueDist(a, b){
   const d = Math.abs(hue(a) - hue(b)); return Math.min(d, 360 - d);
 }
 function applyTheme(){
-  const t = cfg().theme || {}, mode = t.mode || 'system', accent = t.accent || '#ff8a1f';
+  const t = cfg().theme || {}, mode = t.mode || 'system', accent = t.accent || '#7c5cff';
   const dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   const root = document.documentElement;
   root.dataset.theme = dark ? 'dark' : 'light';
@@ -325,12 +325,12 @@ function viewHome(){
   const status = tok
     ? (meta.lastSync ? `Synced ${new Date(meta.lastSync).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' })}` : 'Connected, not synced yet')
     : 'Not connected to Strava';
-  let html = `<h1 class="brand">Vitamin <i>Me</i></h1><div class="status">${esc(status)}</div>`;
+  let html = `<h1 class="brand">${wordmark()}</h1><div class="status">${esc(status)}</div>`;
 
   if (!acts.length){
     html += tok
-      ? `<div class="empty">No workouts yet.<button class="btn go" onclick="sync()">Sync from Strava</button></div>`
-      : `<div class="empty">Connect your Strava account to pull in your workouts.<button class="btn go" onclick="location.hash='#/settings/strava'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
+      ? `<div class="empty">${doppelSays('sleep', 'No workouts yet. Past you is waiting.')}<button class="btn go" onclick="sync()">Sync from Strava</button></div>`
+      : `<div class="empty">${doppelSays('wave', "Hi, I'm Doppel: past you. Connect Strava and I'll bring every run you've ever done.")}<button class="btn go" onclick="location.hash='#/settings/strava'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
     return html;
   }
 
@@ -348,6 +348,7 @@ function viewHome(){
       ${col('Running this week', wkKm, goal, `${Math.round(Math.min(999, wkKm / goal * 100))}%`)}
       ${col(`Running in ${now.toLocaleString('en-ZA', { month:'long' })}`, moKm, mGoal, `${moN} workout${moN === 1 ? '' : 's'}`)}
     </div>`;
+  html += pastYouHtml(acts);
 
   html += `<h2>Workouts</h2>${listControlsHtml(acts)}<div id="wlist">${workoutListHtml(acts)}</div>`;
   html += poweredByStrava();
@@ -550,56 +551,26 @@ function bindList(){
   };
 }
 
-/* ---------------- progress: records + vitamins ---------------- */
+/* ---------------- progress: trophies, medals, territory, records ---------------- */
 const shortDate = iso => new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 function recordValue(r){
   if (r.kind === 'time') return dur(r.t);
   if (r.kind === 'km') return `${nf(r.value, r.key === 'week' ? 1 : 2)} km`;
   return `${r.value} week${r.value === 1 ? '' : 's'}`;
 }
-/* Big capsule for a vitamin tile: left half its own colour, right half the accent. Locked: outlined, fills with progress. */
-function capsuleSvg(v){
-  const done = v.count > 0, pct = done ? 100 : v.next ? Math.max(0, Math.min(100, v.next.value / v.next.target * 100)) : 0;
-  const cp = `cp-${v.id}-${Math.random().toString(36).slice(2, 6)}`;
-  const label = `${esc(v.name)}${done ? `, collected ${v.count} time${v.count > 1 ? 's' : ''}` : `, ${Math.round(pct)}% of the way`}`;
-  return `<svg class="cap ${done ? 'on' : ''}" viewBox="0 0 120 52" role="img" aria-label="${label}">
-    <defs><clipPath id="${cp}"><rect x="2" y="2" width="116" height="48" rx="24"/></clipPath></defs>
-    ${done ? `<rect x="2" y="2" width="58" height="48" fill="${v.color}" clip-path="url(#${cp})"/>
-              <rect x="60" y="2" width="58" height="48" fill="var(--accent)" clip-path="url(#${cp})"/>
-              <line x1="60" y1="2" x2="60" y2="50" stroke="#000" stroke-opacity=".12" stroke-width="1.5"/>
-              <rect x="12" y="9" width="36" height="7" rx="3.5" fill="#fff" opacity=".4"/>
-              <rect x="70" y="9" width="36" height="7" rx="3.5" fill="#fff" opacity=".3"/>
-              <text x="31" y="34" text-anchor="middle" class="capsym" style="fill:${inkFor(v.color)}">${esc(v.sym)}</text>`
-           : `<rect x="2" y="2" width="${(116 * pct / 100).toFixed(1)}" height="48" fill="${v.color}" opacity=".28" clip-path="url(#${cp})"/>
-              <rect x="2" y="2" width="116" height="48" rx="24" fill="none" stroke="${v.color}" stroke-opacity=".55" stroke-width="2" stroke-dasharray="5 4"/>
-              <text x="60" y="34" text-anchor="middle" class="capsym locked">${esc(v.sym)}</text>`}
-    </svg>${v.count > 1 ? `<span class="badge" style="background:${v.color};color:${inkFor(v.color)}">×${v.count}</span>` : ''}`;
-}
 function viewProgress(){
   const R = getLedger().rec;
   if (!R || !Object.keys(store.get(K.acts, {})).length)
-    return `<h1 class="brand">Progress</h1><div class="empty">Sync your workouts first. Records and vitamins are worked out from your history.</div>`;
-  const types = R.vitamins.filter(v => v.count).length, total = R.log.length;
-  const latest = R.log[R.log.length - 1], lv = latest && R.vitamins.find(v => v.id === latest.id);
+    return `<h1 class="brand">Progress</h1><div class="empty">${doppelSays('sleep', 'Sync your workouts first. Records, medals and trophies are worked out from your history.')}</div>`;
+  const won = R.trophies.filter(t => t.won).length, medals = R.medals.reduce((s, m) => s + m.count, 0);
+  const latest = R.log[R.log.length - 1];
+  const la = latest && (latest.kind === 'trophy' ? R.trophies : R.medals).find(x => x.id === latest.id);
   let html = `<h1 class="brand">Progress</h1>
-    <div class="jarhero">${jarSvg(R.log, { cls: 'big' })}
-      <div><div class="jarcount num">${nf(total)}</div><div class="lbl">vitamin${total === 1 ? '' : 's'} in your jar</div>
-        <div class="lbl">${types} of ${R.vitamins.length} kinds found</div>
-        ${lv ? `<div class="lbl jarlast"><i style="background:${lv.color}"></i>Latest: ${esc(lv.name)}, ${shortDate(latest.date)}</div>` : ''}
-        <button class="replay" onclick="celebrate(3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg>Replay the drop</button></div></div>`;
-
-  const nextTxt = v => v.next ? `${nf(v.next.value, v.unit === 'km' ? 1 : 0)} of ${nf(v.next.target, v.next.target % 1 ? 1 : 0)} ${v.unit}` : '';
-  const order = [...R.vitamins].sort((a, b) => (b.count > 0) - (a.count > 0));   // collected first, original order kept within groups
-  html += `<h2>Vitamins</h2><div class="vits">` +
-    order.map(v => {
-      const status = v.count ? (v.count === 1 ? `Collected ${shortDate(v.last.date)}` : `Last collected ${shortDate(v.last.date)}`) : '';
-      const next = v.once && v.count ? 'Milestone reached' : v.next ? (v.count ? `Next: ${nextTxt(v)}` : nextTxt(v)) : (v.count ? '' : 'Not collected yet');
-      return `<div class="vit ${v.count ? 'on' : ''}" style="--vc:${v.color}"><div class="capwrap">${capsuleSvg(v)}</div>
-        <div class="t">${esc(v.name)}${v.once ? ' <span class="chip">Once</span>' : ''}</div><div class="m">${esc(v.desc)}</div>
-        ${status ? `<div class="m s">${status}</div>` : ''}${next ? `<div class="m">${next}</div>` : ''}
-        ${!v.count && v.next ? `<div class="vbar"><i style="width:${Math.min(100, v.next.value / v.next.target * 100).toFixed(0)}%"></i></div>` : ''}</div>`;
-    }).join('') + `</div>
-    <p class="hint">Vitamins are achievements. They don't add XP; they're your collection.</p>`;
+    <div class="awhero">${mascotSvg(won ? 'cheer' : 'run', 112)}
+      <div><div class="awnums"><span><b class="num">${won}</b> troph${won === 1 ? 'y' : 'ies'}</span><span><b class="num">${nf(medals)}</b> medal${medals === 1 ? '' : 's'}</span></div>
+        ${la ? `<div class="lbl">Latest: ${esc(la.name)}, ${shortDate(latest.date)}</div>` : '<div class="lbl">Your first medal is one good run away.</div>'}
+        <button class="replay" onclick="celebrate(3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg>Replay latest</button></div></div>`;
+  html += trophyShelfHtml(R) + medalWallHtml(R);
 
   html += territoryCardHtml();
   html += `<h2>Records</h2>`;
@@ -661,7 +632,7 @@ function viewTerritory(){
       <div><div class="v">${nf(T.area.length)}</div><div class="k">Largest area${T.areas.length > 1 ? `, of ${T.areas.length}` : ''}</div></div>
       <div><div class="v">${T.square.size}×${T.square.size}</div><div class="k">Biggest square</div></div>
     </div>
-    <p class="hint">The whole world is split into a grid of tiles${here !== null ? `, about ${Math.round(Territory.tileSizeM(here))} m across where you run` : ''}. Pass through a tile you've never visited to claim it: +${p.tilePts} XP each, and every 100 tiles is a Vitamin B3. Repeating the same loop earns nothing new, so go explore.</p>
+    <p class="hint">The whole world is split into a grid of tiles${here !== null ? `, about ${Math.round(Territory.tileSizeM(here))} m across where you run` : ''}. Pass through a tile you've never visited to claim it: +${p.tilePts} XP each, and every 100 tiles is an Explorer medal. Repeating the same loop earns nothing new, so go explore.</p>
     <p class="hint">Largest area is your biggest connected patch of tiles. Biggest square is the largest solid block with no gaps; fill in the holes to grow it.</p>${poweredByStrava()}`;
 }
 function drawTerritory(){
@@ -741,12 +712,12 @@ function viewSettings(path = ''){
       ${ACCENTS.map(([n,h]) => `<button class="sw" data-accent="${h}" style="background:${h}" aria-label="${n}" aria-pressed="${accent === h}"></button>`).join('')}
       <label class="sw custom" aria-label="Custom colour" aria-pressed="${!ACCENTS.some(a => a[1] === accent)}"><input type="color" id="customAccent" value="${esc(accent)}"></label>
     </div>
-    <p class="hint">Used for XP bars, buttons, routes, and one half of every vitamin capsule.</p>`;
+    <p class="hint">Used for XP bars, buttons, routes, and Doppel's sweatband and shoes.</p>`;
 
   if (path === '/strava'){
     let html = `${backTo('#/settings', 'Settings')}<h1 class="brand">Strava</h1>`;
     if (pendingCode) html += `<h2>Finish connecting</h2>
-      <p class="hint">Strava sent you back to Safari instead of the app. Copy this code, open Vitamin Me from your home screen, and paste it under Settings, Strava.</p>
+      <p class="hint">Strava sent you back to Safari instead of the app. Copy this code, open Doppel from your home screen, and paste it under Settings, Strava.</p>
       <div class="field"><input id="codeOut" readonly value="${esc(pendingCode)}"></div>
       <button class="btn go" id="copyCode">Copy code</button>`;
     html += tok
@@ -839,7 +810,7 @@ function bindSettings(){
     const f = bf.files[0]; if (!f) return;
     try {
       const b = JSON.parse(await f.text());
-      if (b.app !== 'vitamin-me' || !b.cfg) throw new Error('This is not a Vitamin Me backup.');
+      if (!['doppel', 'vitamin-me'].includes(b.app) || !b.cfg) throw new Error('This is not a Doppel backup.');
       if (!confirm(`Restore settings, scoring rules and pause weeks from ${new Date(b.exported).toLocaleDateString('en-ZA')}?`)) return;
       const keep = cfg(); setCfg({ ...b.cfg, clientId: keep.clientId || b.cfg.clientId, clientSecret: keep.clientSecret });
       store.set(K.meta, { ...store.get(K.meta, {}), lastExport: Date.parse(b.exported) || Date.now() });
@@ -886,13 +857,13 @@ async function ensurePersistent(){
 }
 function backupPayload(){
   const { clientSecret, ...safeCfg } = cfg();
-  return { app: 'vitamin-me', version: 2, exported: new Date().toISOString(), cfg: safeCfg };
+  return { app: 'doppel', version: 2, exported: new Date().toISOString(), cfg: safeCfg };
 }
 async function exportBackup(){
-  const name = `vitamin-me-backup-${Scoring.dayKey(new Date())}.json`;
+  const name = `doppel-backup-${Scoring.dayKey(new Date())}.json`;
   const file = new File([JSON.stringify(backupPayload(), null, 1)], name, { type: 'application/json' });
   try {
-    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Vitamin Me backup' });
+    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Doppel backup' });
     else { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click(); }
     store.set(K.meta, { ...store.get(K.meta, {}), lastExport: Date.now() });
     route(); toast('Backup saved.');
@@ -906,7 +877,7 @@ function route(){
   if (h.startsWith('#/a/')) viewDetail(h.slice(4));
   else if (h.startsWith('#/settings')){ $('view').innerHTML = viewSettings(h.slice(10)); bindSettings(); }
   else if (h === '#/league'){ $('view').innerHTML = viewLeague(); bindLeague(); }
-  else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); }
+  else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); bindAwards(); }
   else if (h === '#/territory'){ $('view').innerHTML = viewTerritory(); drawTerritory(); }
   else if (h.startsWith('#/ghost/')) viewGhost(h.slice(8));
   else { $('view').innerHTML = viewHome(); if ($('wlist')) bindList(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }

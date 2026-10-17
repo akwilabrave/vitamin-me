@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vitamin Me</title>
+<title>Doppel</title>
 <meta name="theme-color" content="#10151c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Vitamin Me">
+<meta name="apple-mobile-web-app-title" content="Doppel">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -23,7 +23,7 @@
 </script>
 <style>
   :root{
-    --accent:#ff8a1f; --accent-ink:#1b1206; --accent2:#20b2a6; --hr:#ef476f; --bad:#e5484d;
+    --accent:#7c5cff; --accent-ink:#ffffff; --accent2:#20b2a6; --hr:#ef476f; --bad:#e5484d;
     --round: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
   }
   [data-theme="dark"]{ --glass:rgba(255,255,255,.06); --glassline:rgba(230,240,250,.42); --bg:#10151c; --panel:#18202a; --line:#243040; --text:#eef2f6; --muted:#8c99a8; --dock:rgba(16,21,28,.9); color-scheme:dark; }
@@ -54,16 +54,6 @@
   .pointsub b{color:var(--text);font-weight:650;font-variant-numeric:tabular-nums}
   .hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
   .herol{min-width:0}
-  .jarbtn{display:flex;flex-direction:column;align-items:center;text-decoration:none;flex:none;margin-top:-4px}
-  .jarbtn .jar{width:68px;height:auto}
-  .jarbtn .num{font-size:15px;margin-top:-2px}
-  .jar{overflow:visible}
-  .jarhero{display:flex;align-items:center;gap:20px;margin:6px 0 4px}
-  .jarhero .jar.big{width:150px;flex:none}
-  .jarcount{font-size:56px;line-height:1;color:var(--text)}
-  .jarhero .lbl{color:var(--muted);font-size:14px}
-  .jarlast{margin-top:10px;display:flex;align-items:center;gap:6px}
-  .jarlast i,.vchip i{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
   #tmap{height:58vh;min-height:320px;border-radius:18px;margin:14px 0 10px;background:var(--panel);overflow:hidden}
   .tview{margin-bottom:6px}
   .ttip{background:var(--panel);color:var(--text);border:1px solid var(--line);font-weight:650;box-shadow:none}
@@ -96,9 +86,6 @@
   .seg + .verdict{margin-top:12px}
   .replay{margin-top:12px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600}
   .replay svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-  .vbar{height:4px;border-radius:2px;background:var(--line);margin-top:6px;overflow:hidden;max-width:150px}
-  .vbar i{display:block;height:100%;background:var(--vc)}
-  .vit .capsym.locked{fill:var(--vc);opacity:.75}
 
   /* celebration */
   .celebrate{position:fixed;inset:0;z-index:950;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.45);
@@ -106,28 +93,87 @@
   .celebrate.out{animation:fadeout .2s ease both}
   .cel-card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:22px 22px 18px;text-align:center;
     animation:popin .35s cubic-bezier(.2,.9,.3,1.2) both}
-  .cel-card .jar.big{width:170px;margin:0 auto 6px;display:block}
   .cel-title{font-family:var(--round);font-size:28px;font-weight:800;margin:6px 0 10px}
-  .cel-one{display:flex;align-items:center;gap:14px;text-align:left}
-  .cel-one .capwrap{width:96px;flex:none}
-  .cel-one .cap{width:96px}
   .celebrate:focus{outline:none}
-  .cel-one .badge{display:none}
   .cel-name{font-family:var(--round);font-size:20px;font-weight:750}
-  .cel-one .m,.cel-sub{color:var(--muted);font-size:14px}
   .cel-sub{margin:0 0 10px}
   .cel-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
-  .vchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px}
   .cel-card .btn{margin-top:18px}
-  .drop{animation:drop .85s cubic-bezier(.35,0,.45,1) both}
-  .lid{transform-box:fill-box;transform-origin:100% 100%}
-  .celebrate .lid{animation:lid 2s ease both}
-  @keyframes drop{0%{transform:translateY(-150px);opacity:0}12%{opacity:1}68%{transform:translateY(3px)}82%{transform:translateY(-4px)}100%{transform:translateY(0)}}
-  @keyframes lid{0%{transform:none}12%,82%{transform:translate(10px,-16px) rotate(24deg)}100%{transform:none}}
   @keyframes popin{from{transform:scale(.88);opacity:0}to{transform:none;opacity:1}}
   @keyframes fadein{from{opacity:0}}
   @keyframes fadeout{to{opacity:0}}
-  @media (prefers-reduced-motion:reduce){.drop,.celebrate .lid,.cel-card,.celebrate{animation:none}}
+  @media (prefers-reduced-motion:reduce){.cel-card,.celebrate,.medalswing svg,.trophyrise .trophy,.cel-grid>div,.peek{animation:none}}
+
+  /* Doppel: wordmark, speech bubble, past-you card */
+  .wordmark{display:inline-flex;align-items:center;gap:6px}
+  .wordmark .mascot{margin:-6px -2px -4px -6px}
+  .says{display:flex;align-items:center;gap:10px;text-align:left;max-width:360px;margin:0 auto}
+  .says .mascot{flex:none}
+  .bubble{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px;color:var(--text);font-size:15px}
+  .bubble::before{content:"";position:absolute;left:-7px;top:50%;width:12px;height:12px;background:inherit;border:inherit;border-width:0 0 1px 1px;transform:translateY(-50%) rotate(45deg)}
+  .pastyou{display:flex;align-items:center;gap:10px;margin:14px 0 0;padding:10px 14px 12px 6px;border:1px solid var(--line);border-radius:18px;background:var(--panel);text-decoration:none}
+  .pastyou .mascot{flex:none}
+  .pybody{flex:1;min-width:0}
+  .pyt{font-size:14px;line-height:1.35;margin-bottom:8px}
+  .pyrow{display:grid;grid-template-columns:62px 1fr auto;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .pyrow + .pyrow{margin-top:4px}
+  .pyrow b{color:var(--text);font-weight:650;min-width:52px;text-align:right}
+  .pybar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+  .pybar i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+  .pyrow.ghost .pybar i{background:repeating-linear-gradient(-45deg,#a5abd8 0 5px,#c9cdf0 5px 10px)}
+
+  /* trophy case button, progress hero */
+  .casebtn{display:flex;flex-direction:column;align-items:center;text-decoration:none;flex:none;margin-top:-6px}
+  .casebtn .num{font-size:15px;margin-top:-4px}
+  .casebtn .num small{color:var(--muted);font-size:12px}
+  .awhero{display:flex;align-items:center;gap:14px;margin:4px 0 0}
+  .awhero .mascot{flex:none}
+  .awnums{display:flex;gap:16px;font-size:14px;color:var(--muted)}
+  .awnums b{display:block;font-size:40px;line-height:1;color:var(--text)}
+  .awhero .lbl{color:var(--muted);font-size:13px;margin-top:6px}
+  .h2n{font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
+
+  /* trophy shelf: three to a plank */
+  .shelf{border-radius:18px;padding:10px 10px 4px;background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 70%,var(--bg)),var(--panel));border:1px solid var(--line)}
+  .shelfrow{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;align-items:end}
+  .plank{height:12px;margin:0 -4px 12px;border-radius:4px;background:linear-gradient(180deg,#b9875a,#8a5d38);box-shadow:0 6px 10px -6px rgba(0,0,0,.5)}
+  [data-theme="dark"] .plank{background:linear-gradient(180deg,#6d4c33,#4a3222)}
+  .tro,.med{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;position:relative}
+  .tro:focus-visible,.med:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+  .tro .trophy{margin-bottom:-2px}
+  .tro .t,.med .t{font-size:12px;font-weight:650;line-height:1.2;margin-top:2px;max-width:100%}
+  .tro .t{font-size:10.5px;min-height:2.4em;display:flex;align-items:center;justify-content:center;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
+  .tro .m,.med .m{font-size:11px;color:var(--muted);margin-bottom:6px}
+  .tro:not(.on) .t{color:var(--muted)}
+  .tbar{display:block;width:56px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin:4px 0 8px}
+  .tbar i{display:block;height:100%;background:var(--accent)}
+
+  /* medal wall: medals hang from pegs */
+  .wall{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;padding:14px 8px 8px;border-radius:18px;border:1px solid var(--line);
+    background:radial-gradient(circle at 1px 1px,color-mix(in srgb,var(--muted) 22%,transparent) 1px,transparent 1.5px) 0 0/14px 14px,var(--panel)}
+  @media (max-width:360px){.wall{grid-template-columns:repeat(3,1fr)}}
+  .hook{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.6;margin-bottom:-6px;position:relative;z-index:1}
+  .med .medal{transform-origin:50% 0}
+  .med.on:hover .medal,.med.on:active .medal{animation:swing 1s ease}
+  .med:not(.on) .t{color:var(--muted)}
+  .cnt{position:absolute;top:44px;right:calc(50% - 38px);background:var(--text);color:var(--bg);font-family:var(--round);font-weight:800;font-size:11px;border-radius:999px;padding:1px 6px}
+
+  /* award celebrations */
+  .cel-art{position:relative;display:grid;place-items:center;margin:2px auto 4px}
+  .kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .medalswing svg{transform-origin:50% 0;animation:hang 1.6s cubic-bezier(.3,1.4,.4,1) both}
+  .trophyrise .trophy{position:relative;animation:rise .9s cubic-bezier(.2,1.3,.3,1) both}
+  .trophyrise .burst{animation-delay:.3s}
+  .peek{position:absolute;right:-8px;bottom:-4px;animation:peek .6s .7s cubic-bezier(.2,1.4,.3,1) both}
+  .cel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 6px;margin:4px 0 2px}
+  .cel-grid>div{display:flex;flex-direction:column;align-items:center;font-size:12px;font-weight:600;animation:popin .45s cubic-bezier(.2,1.4,.3,1) both}
+  .cel-grid span{line-height:1.2;margin-top:2px}
+  .sheet .cel-sub{margin:0 0 6px}
+  .sheet .btn{margin-top:10px}
+  @keyframes hang{0%{transform:translateY(-120px) rotate(0)}40%{transform:translateY(0) rotate(14deg)}60%{transform:rotate(-8deg)}78%{transform:rotate(4deg)}100%{transform:none}}
+  @keyframes swing{25%{transform:rotate(8deg)}55%{transform:rotate(-5deg)}80%{transform:rotate(2deg)}}
+  @keyframes rise{from{transform:translateY(40px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+  @keyframes peek{from{transform:translateY(20px) scale(.5);opacity:0}to{transform:none;opacity:1}}
   /* XP, streak and rank */
   .ico{display:inline-block;vertical-align:-3px;flex:none}
   .rankhero{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin:4px 0 12px}
@@ -326,15 +372,6 @@
   .rec .m{color:var(--muted);font-size:13px}
   .rec .rv{font-family:var(--round);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
   h2 .count{font-family:-apple-system,system-ui,sans-serif;font-size:14px;font-weight:500;color:var(--muted);margin-left:8px}
-  .vits{display:grid;grid-template-columns:1fr 1fr;gap:20px 14px}
-  .vit .cap{width:100%;max-width:150px;height:auto;display:block;margin-bottom:8px}
-  .capwrap{position:relative;max-width:150px}
-  .badge{position:absolute;top:-6px;right:-6px;background:var(--text);color:var(--bg);font-family:var(--round);font-weight:800;font-size:13px;border-radius:999px;padding:2px 8px}
-  .vit .capsym{font-family:var(--round);font-size:22px;font-weight:800;fill:var(--muted)}
-  .vit .t{font-weight:650}
-  .vit .m{color:var(--muted);font-size:13px;line-height:1.35}
-  .vit .s{margin-top:4px;color:var(--text);font-variant-numeric:tabular-nums}
-  .vit:not(.on) .t{color:var(--muted)}
   .check{display:flex;gap:10px;align-items:center;margin:14px 0;font-size:15px}
   .toast{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 10px);max-width:608px;margin:0 auto;
     background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--text);
@@ -349,7 +386,7 @@
 
 <nav class="dock">
   <button id="navHome" aria-label="Workouts" title="Workouts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></button>
-  <button id="navProgress" aria-label="Progress" title="Progress"><svg viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(-40 12 12)"><rect x="2.5" y="8" width="19" height="8" rx="4"/><path d="M12 8v8"/></g></svg></button>
+  <button id="navProgress" aria-label="Progress" title="Progress"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 4M17 6h2.5a2.5 2.5 0 0 1-2.6 4M12 14v3M8 21h8l-1-4H9z"/></svg></button>
   <button id="navLeague" aria-label="League" title="League"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 19.5 5v6c0 5-3.2 8.6-7.5 10.5C7.7 19.6 4.5 16 4.5 11V5Z"/><path d="m12 7.5 1.4 2.9 3.1.4-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.4Z"/></svg></button>
   <button id="navSync" class="go" aria-label="Sync from Strava" title="Sync from Strava"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20.5V16h-4.5"/></svg></button>
   <button id="navSettings" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></button>
@@ -362,7 +399,8 @@
 <script src="territory.js"></script>
 <script src="ghost.js"></script>
 <script src="records.js"></script>
-<script src="jar.js"></script>
+<script src="art.js"></script>
+<script src="awards.js"></script>
 <script src="race.js"></script>
 <script src="league-ui.js"></script>
 <script src="app.js"></script>

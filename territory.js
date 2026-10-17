@@ -1,5 +1,5 @@
 /* ================================================================
-   Vitamin Me — territory (pure functions)
+   Doppel — territory (pure functions)
    The world is divided into Web-Mercator tiles at zoom 17 (≈ 300 m × cos(latitude),
    about 275 m in Pretoria). Running or riding through a tile claims it.
    Works anywhere on Earth with no map lookups.

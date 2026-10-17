@@ -1,6 +1,6 @@
 "use strict";
 /* ================================================================
-   Vitamin Me — XP, streak and league UI
+   Doppel — XP, streak and league UI
    · xpIcon / streakIcon: inline icons used across the app
    · badgeSvg(league): 12 procedurally drawn badges that grow grander per league
    · rank hero (home), League page (#/league), pause weeks, rank celebrations
@@ -133,7 +133,7 @@ function rankHeroHtml(){
         <div class="rname">${esc(rankName(r))}</div><div class="rlvl">Level ${r.level}${r.level === Leagues.MAX_LEVEL ? ', the top' : ''}</div>
         <div class="xpbar"><i style="width:${pct.toFixed(1)}%"></i></div>
         <div class="xpnums">${xpIcon(15)}<b>${nf(r.xp)}</b>${r.next ? ` / ${nf(r.next)} XP` : ' XP'}</div></a>
-      ${jarButtonHtml()}
+      ${caseButtonHtml()}
     </div>
     <div class="statrow">
       <div class="stat ${s.secured ? '' : 'dim'}" title="Weeks in a row with 3+ workouts">
@@ -152,7 +152,7 @@ function rankHeroHtml(){
 /* ---------- League page ---------- */
 function viewLeague(){
   const G = LG(); if (!G || !Object.keys(store.get(K.acts, {})).length)
-    return `<h1 class="brand">League</h1><div class="empty">Sync your workouts first. Your league is worked out from your training history.</div>`;
+    return `<h1 class="brand">League</h1><div class="empty">${doppelSays('sleep', 'Sync your workouts first. Your league is worked out from your training history.')}</div>`;
   const r = G.rank, LGS = Leagues.LEAGUES, p = getLedger().params, c = G.current;
   const pct = r.next ? (r.xp - r.levelStart) / (r.next - r.levelStart) * 100 : 100;
   let html = `<h1 class="brand">League</h1>
@@ -215,8 +215,8 @@ function viewLeague(){
 
   html += `<details class="how"><summary>How leagues work</summary>
     <p>Every workout earns XP. Each level costs more XP than the last, and every five levels is a new league: ${LGS.length} leagues, ${Leagues.MAX_LEVEL} levels.</p>
-    <p>From Fartlek up, each league has a <b>weekly minimum</b>. Finish a week (Monday to Sunday) below it and you lose that minimum. A week with <b>no workouts at all</b> also costs ${p.detrainPct}% of your XP, the way fitness fades. Lose enough and you drop a level, and eventually a league.</p>
-    <p>Protections: this week is never penalised until it's over; Lace-Up and Shuffler have no penalties; your first ${p.graceWeeks} weeks in a newly reached league are minimum-free; and up to ${p.pauseWeeks} weeks a year can be paused.</p>
+    <p>From Jogger up, each league has a <b>weekly minimum</b>. Finish a week (Monday to Sunday) below it and you lose that minimum. A week with <b>no workouts at all</b> also costs ${p.detrainPct}% of your XP, the way fitness fades. Lose enough and you drop a level, and eventually a league.</p>
+    <p>Protections: this week is never penalised until it's over; Couch and Starter have no penalties; your first ${p.graceWeeks} weeks in a newly reached league are minimum-free; and up to ${p.pauseWeeks} weeks a year can be paused.</p>
     <p>Steady training settles you in the league whose minimum it can hold, so climbing means training more, not just training longer.</p></details>${poweredByStrava()}`;
   return html;
 }

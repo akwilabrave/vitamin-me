@@ -1,11 +1,12 @@
 {
-  "name": "Vitamin Me",
-  "short_name": "Vitamin Me",
+  "name": "Doppel",
+  "short_name": "Doppel",
+  "description": "You vs you. Get better than past you.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#0d1117",
+  "background_color": "#10151c",
+  "theme_color": "#10151c",
   "icons": [
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
     {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}

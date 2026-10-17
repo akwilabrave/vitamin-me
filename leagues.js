@@ -1,5 +1,5 @@
 /* ================================================================
-   Vitamin Me — levels and leagues (pure functions)
+   Doppel — levels and leagues (pure functions)
    XP is earned by the scoring ledger (weekly totals). This module replays every
    week of history and applies the league rules, so rank is always derived:
 

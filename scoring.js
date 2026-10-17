@@ -1,5 +1,5 @@
 /* ================================================================
-   Vitamin Me — scoring engine (pure functions, no DOM, no storage)
+   Doppel — scoring engine (pure functions, no DOM, no storage)
    Loaded in the browser as globalThis.Scoring; also requireable in Node for tests.
    ================================================================ */
 (function (root) {

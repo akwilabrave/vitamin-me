@@ -1,6 +1,8 @@
-# Vitamin Me
+# Doppel
 
-A personal fitness app for iPhone that turns your workouts into XP, a ranked ladder of 12 leagues, records, a vitamin collection, a territory map and a ghost to race. It reads your training from Strava, runs entirely on your phone, and costs nothing to host.
+**You vs you. Get better than past you.**
+
+A running app for iPhone where your only rival is who you were yesterday. Your workouts become XP and a ranked ladder of 12 leagues, records, medals and trophies, a territory map, and races against past you on the same routes. Your guide is **Doppel**, a ghost in a sweatband and running shoes: past you, waiting to be beaten. It reads your training from Strava, runs entirely on your phone, and costs nothing to host.
 
 > Built for a Huawei Watch Fit 4 → Huawei Health → Strava setup, but it works with any device that syncs to Strava.
 
@@ -13,11 +15,12 @@ A personal fitness app for iPhone that turns your workouts into XP, a ranked lad
 3. [A tour of the app](#a-tour-of-the-app)
 4. [XP: how it's earned](#xp-how-its-earned)
 5. [Records](#records)
-6. [Vitamins: the achievement collection](#vitamins-the-achievement-collection)
+6. [Medals and trophies](#medals-and-trophies)
 7. [Territory](#territory)
-8. [Ghost runner](#ghost-runner)
+8. [Racing past you](#racing-past-you)
 9. [Levels and leagues](#levels-and-leagues)
-10. [Strava attribution](#strava-attribution)
+10. [The art system](#the-art-system)
+11. [Strava attribution](#strava-attribution)
 11. [Your data, privacy and backups](#your-data-privacy-and-backups)
 12. [Syncing with Strava](#syncing-with-strava)
 13. [Architecture](#architecture)
@@ -31,7 +34,7 @@ A personal fitness app for iPhone that turns your workouts into XP, a ranked lad
 
 ## What it is
 
-Vitamin Me is a **progressive web app**: a website that installs to the iPhone home screen and behaves like a native app (full screen, offline, its own icon). There is no server and no account system. The app is a set of static files hosted on GitHub Pages; everything personal lives in the phone's own storage.
+Doppel is a **progressive web app**: a website that installs to the iPhone home screen and behaves like a native app (full screen, offline, its own icon). There is no server and no account system. The app is a set of static files hosted on GitHub Pages; everything personal lives in the phone's own storage.
 
 It answers one question after every workout: *what did that session earn me?* The answers come in a few deliberately different forms:
 
@@ -40,9 +43,10 @@ It answers one question after every workout: *what did that session earn me?* Th
 | **XP** | Effort, distance, consistency, records, exploration | Your level and league |
 | **Leagues** | Training consistently enough to climb, and to stay | 60 levels across 12 leagues, which you can also lose |
 | **Records** | Getting faster or going further | Bonus XP |
-| **Vitamins** | Milestones and habits, collected like achievements | Nothing; they're a collection |
+| **Medals** | Repeatable feats and habits, bronze → silver → gold | Nothing; they hang on your medal wall |
+| **Trophies** | Ten once-off, hard milestones | Nothing; they stand on your trophy shelf |
 | **Territory** | Running somewhere new | XP per new tile |
-| **Ghost runner** | Beating your past self on the same route | A race, and a vitamin |
+| **Racing past you** | Beating your past self on the same route | A race, and the Overtaker medal |
 
 Everything is **derived from your workout history**. Nothing is stored as "you are level 13"; the app replays your workouts every time. That's why you can change any rule and your whole history is re-scored consistently.
 
@@ -54,15 +58,15 @@ Everything is **derived from your workout history**. Nothing is stored as "you a
 flowchart LR
     W[Huawei Watch Fit 4] --> H[Huawei Health app]
     H -->|built-in Strava sync| S[(Strava)]
-    S -->|Strava API, read-only| A[Vitamin Me<br/>on your iPhone]
+    S -->|Strava API, read-only| A[Doppel<br/>on your iPhone]
     A --> LS[(Phone storage<br/>localStorage + IndexedDB)]
     A -->|map tiles| OSM[OpenStreetMap]
     GH[GitHub Pages] -->|app files only| A
 ```
 
 1. You record a workout on the watch. Huawei Health syncs it to Strava automatically.
-2. When you open Vitamin Me (or tap **Sync**), it asks Strava for anything new.
-3. The app fetches the details it needs (heart rate, best efforts, GPS route), stores them on the phone, and runs its engines: scoring, records, vitamins, territory and ghost matching.
+2. When you open Doppel (or tap **Sync**), it asks Strava for anything new.
+3. The app fetches the details it needs (heart rate, best efforts, GPS route), stores them on the phone, and runs its engines: scoring, records, medals and trophies, territory and same-route matching.
 4. Everything you see is computed on the phone, from that local data.
 
 GitHub Pages only serves the app's code. Your workouts, tokens and settings never go there.
@@ -75,8 +79,8 @@ The bottom bar has five buttons:
 
 | Icon | Tab | What's there |
 |---|---|---|
-| Pulse line | **Workouts** | Your league badge, level and XP bar, streak, the vitamin jar, weekly and monthly running, and the filterable workout list |
-| Capsule | **Progress** | The vitamin jar and collection, the territory card, and your records |
+| Pulse line | **Workouts** | Your league badge, level and XP bar, streak, trophy count, weekly and monthly running, this week vs last-week you, and the filterable workout list |
+| Trophy | **Progress** | Trophy shelf, medal wall, the territory card, and your records |
 | Shield | **League** | Your badge and rank, this week's minimum, the next league, the ladder, XP history and pause weeks |
 | Arrows | **Sync** | Fetches new workouts from Strava (asks first) |
 | Sliders | **Settings** | Appearance, Strava, goals, scoring rules, backup and data |
@@ -85,8 +89,9 @@ The bottom bar has five buttons:
 - **Rank:** your league badge, league and division (e.g. *Jogger III*), level and an XP bar to the next level.
 - **Streak card:** the pulse-flame icon with weeks in a row of 3+ workouts, the XP boost it gives, and three marks for this week's workouts.
 - **XP card:** XP earned this week. If your league has a weekly minimum, a line under the cards says how much is left to hold your league.
-- **Vitamin jar** (top right): one capsule for every vitamin you've collected. Tap it to open Progress.
+- **Trophy case** (top right): your latest trophy and how many of the 10 you've won. Tap it to open Progress.
 - **Running this week / this month:** side by side, each with a bar toward its goal (weekly and monthly km goals are set under **Settings → Goals**).
+- **You vs last-week you:** how far you've run this week against how far you had run by the same moment last week. Doppel looks smug when past you is ahead, and worried when you are.
 - **Workout list:** with filters:
   - **Type chips:** All, Runs, Walks, Rides, Strength, Other. Only the types you have are shown.
   - **Period:** All time, This week, This month, 30 days, This year.
@@ -99,12 +104,12 @@ Tap any workout to see:
 - **Map:** the route, with any territory tiles that run claimed.
 - **Stats:** distance, moving time, pace or speed, calories, average and max heart rate, elevation.
 - **XP breakdown:** every line that earned XP (effort blocks, distance, streak boost, consistency, records, exploration).
-- **Ghost runner card:** if you've run this route before.
+- **Race past you card:** if you've run this route before.
 - **Heart-rate chart:** with your effort zone shaded, so you can see where XP was earned.
 - **Kilometre splits:** for runs and walks.
 
 ### Progress
-The vitamin jar, the full collection, the territory summary and your records.
+The trophy shelf, the medal wall, the territory summary and your records. Tap any medal or trophy for its rule, your progress and the workout that won it.
 
 ---
 
@@ -198,37 +203,58 @@ The **first** time you run a distance, it sets the record without a bonus. Only 
 
 ---
 
-## Vitamins: the achievement collection
+## Medals and trophies
 
-Vitamins are **achievements, not currency**. They never add XP. Each type has its own colour; every capsule pairs that colour with your accent colour.
+Medals and trophies are **achievements, not currency**. They never add XP. Both are re-derived from your full history, like everything else.
 
-Most can be collected **many times**, and the jar fills up as you do. Three are one-off milestones.
+### Medals: the medal wall
+Medals are **repeatable**. Each one counts up every time you earn it, and its disc turns **bronze → silver → gold** as the count passes its tier thresholds (silver and gold also get one and two stars). The ribbon keeps the medal's own colour.
 
-| Vitamin | Collected | Repeats |
+| Medal | Earned | Silver / Gold at |
 |---|---|---|
-| **A** | Every new personal record | ✓ |
-| **B1** | Every 10 workouts | ✓ |
-| **B3** | Every 100 new territory tiles | ✓ |
-| **B5** | Every time you beat last time's pace on a repeated route | ✓ |
-| **B6** | 50 workouts | once |
-| **B12** | 100 workouts | once |
-| **C** | Every 4 weeks of streak (3+ workouts a week) | ✓ |
-| **D** | Every run of 10 km or more | ✓ |
-| **D3** | Every half marathon (21.1 km) | ✓ |
-| **E** | Every 60-minute effort block | ✓ |
-| **K** | Every 100 km of running | ✓ |
-| **K2** | 500 km of running in total | once |
-| **Iron** | Every workout with 30+ vigorous minutes | ✓ |
-| **Zinc** | Every week with 150+ minutes in your effort zone | ✓ |
-| **Magnesium** | Every 10 workouts started before 07:00 | ✓ |
-| **Calcium** | Every 1,000 m climbed | ✓ |
-| **Omega-3** | Every 5 rest-day bonuses | ✓ |
+| **Record Breaker** | Every new personal record | 10 / 25 |
+| **Overtaker** | Every time you beat past you on a repeated route | 10 / 25 |
+| **Ten K** | Every run of 10 km or more | 10 / 25 |
+| **Half Marathon** | Every run of 21.1 km or more | 5 / 12 |
+| **Century** | Every 100 km of running | 5 / 10 |
+| **Ten Pack** | Every 10 workouts | 5 / 10 |
+| **Streak Keeper** | Every 4 weeks of streak (3+ workouts a week) | 3 / 6 |
+| **Hour of Power** | Every 60-minute effort block | 10 / 25 |
+| **Red Zone** | Every workout with 30+ vigorous minutes | 10 / 30 |
+| **Engine Week** | Every week with 150+ minutes in your effort zone | 8 / 20 |
+| **Explorer** | Every 100 new territory tiles | 5 / 15 |
+| **Climber** | Every 1,000 m climbed | 5 / 15 |
+| **Early Bird** | Every 10 workouts started before 07:00 | 5 / 10 |
+| **Recovery** | Every 5 rest-day bonuses | 5 / 12 |
 
-### The jar and the celebration
-- **The jar:** holds one capsule per collection, in the order you earned them, oldest at the bottom. It shows the newest 60 once full; the count keeps going.
-- **The celebration:** when a sync brings in new vitamins, a card pops up, the lid lifts, the new capsules drop in, and you get a **Congratulations!** with a dismiss button ("Keep pushing", "Great! I can do more", …).
-- **Replay:** **Replay the drop** on the Progress page re-runs the animation as a demo.
-- **Reduce Motion:** if it's on in iOS, the card appears without animation.
+### Trophies: the trophy shelf
+Trophies are **once-off and hard**: each is a line past you never crossed. Every trophy is the same gold cup with its own emblem and gem; unwon ones stand on the shelf as silhouettes with a progress bar.
+
+| Trophy | To win it |
+|---|---|
+| **Marathon** | Run 42.2 km in one go |
+| **Faster Than Then** | Run 5 km at least 10% faster than your first 5 km on record |
+| **Thousand Club** | Run 1,000 km in total |
+| **Unbroken** | Hold your streak for 26 weeks in a row |
+| **Ghost Hunter** | Beat past you on 10 different routes |
+| **Big Week** | Run 75 km in a single week |
+| **Everest** | Climb 8,849 m in total |
+| **Cartographer** | Explore 2,500 territory tiles |
+| **Dawn Patrol** | Start 50 workouts before 07:00 |
+| **Hundred Hours** | Spend 100 hours in your effort zone |
+
+For *Faster Than Then*, the improvement is
+
+$$\text{gain} = \frac{t_\text{first 5 km} - t_\text{best 5 km since}}{t_\text{first 5 km}} \times 100\% \geq 10\%$$
+
+A route for *Ghost Hunter* is identified by the first run on it, so beating past you twice on the same loop counts once.
+
+### Celebrations
+- **Meet Doppel:** the first time the app opens after an update to Doppel (or on a new install), Doppel introduces itself instead of flooding you with every medal from your history.
+- **After a sync:** a single new medal swings in on its ribbon ("Upgraded to Silver" when it changes tier); a trophy rises onto the screen with a sunburst while Doppel looks on in shock; several awards show as a grid with Doppel cheering.
+- **Replay latest** on the Progress page replays your three most recent awards as a demo.
+- Level and league changes follow straight after.
+- **Reduce Motion:** if it's on in iOS, cards appear without animation.
 
 ---
 
@@ -250,9 +276,9 @@ across, which is about **275 m in Pretoria**. The grid works anywhere on Earth, 
 
 ---
 
-## Ghost runner
+## Racing past you
 
-Run the same route twice and your past self becomes a ghost to race.
+Run the same route twice and past you, Doppel, is waiting to race.
 
 **How routes are matched.** Two runs are the same route when their territory tiles overlap strongly and their distances are close:
 
@@ -260,14 +286,14 @@ $$J(A, B) = \frac{|A \cap B|}{|A \cup B|} \geq 0.6 \qquad\text{and}\qquad |d_A -
 
 Direction doesn't matter: a loop run the other way still matches. No naming or setup is needed.
 
-**On a workout.** A **Ghost runner** card compares your pace with the last time you ran the route, and tells you how many times you've run it.
+**On a workout.** A **Race past you** card compares your pace with the last time you ran the route, and tells you how many times you've run it.
 
-**The ghost race page:**
+**The race page:**
 - **Opponent:** race **Last time** or **Your best here**.
-- **Verdict:** e.g. "You beat your ghost by 1:05", with a short race story (biggest lead, comebacks, where it was decided).
-- **Replay:** you and the ghost move along today's route on the map at 90× speed, with a live clock and the gap in metres.
+- **Verdict:** e.g. "You beat past you by 1:05", with a short race story (biggest lead, comebacks, where it was decided).
+- **Replay:** you and Doppel move along today's route on the map at 90× speed, with a live clock and the gap in metres.
 - **Gap chart:** your lead or deficit over the whole distance.
-- **Kilometre table:** your split vs the ghost's, and the running gap.
+- **Kilometre table:** your split vs past you's, and the running gap.
 
 The comparison uses **elapsed** time, so stops count, as they would in a real race.
 
@@ -332,11 +358,25 @@ Your rank is placed by replaying your whole history, so the first time you open 
 
 ### Celebrations
 
-Placement, level-ups (XP bar fills), promotions (badge reveal with a sunburst) and drops (a calm card explaining what cost the XP) each get their own card. Re-entering a league you'd dropped from says *"Back in …"* instead of a full promotion. Vitamin celebrations come first, then rank changes.
+Placement, level-ups (XP bar fills), promotions (badge reveal with a sunburst) and drops (a calm card explaining what cost the XP) each get their own card. Re-entering a league you'd dropped from says *"Back in …"* instead of a full promotion. Medal and trophy celebrations come first, then rank changes.
 
 ### Tuning
 
 **Settings → XP and leagues → Leagues** adjusts minimum strength (%), detraining (%), grace weeks and pause weeks per year. The level curve and league thresholds are fixed, so the top can't be reached by changing settings.
+
+## The art system
+
+Everything drawn in Doppel (the mascot, medals, trophies, league badges and icons) is generated as SVG in code from the same few rules, in `art.js` and `league-ui.js`, so it reads as one family:
+
+- **Material:** one three-stop vertical gradient per object: a light tint, the base colour, a dark shade.
+- **Rim:** a solid outline in that dark shade, with round joins.
+- **Shine:** a single soft white highlight, top left.
+- **Emblems:** 24-unit line icons with 2 px round strokes, in a contrasting ink.
+- **Type:** rounded, heavy.
+
+**Doppel** is a pale ghost whose body melts into a streaming tail when running. It wears a **sweatband and running shoes in your accent colour**, so it always matches your theme. It has seven moods: `run`, `cheer`, `smug`, `wow`, `sleep`, `sad` and `wave`. Doppel appears in the header, empty states, celebrations, the past-you card, the race page (its mood depends on who won) and on the map as the runner you're racing. The app icon is Doppel mid-stride.
+
+---
 
 ## Strava attribution
 
@@ -378,7 +418,7 @@ Every screen that shows Strava data (workouts, a workout, ghost race, progress, 
 
 1. **Static and serverless.** Plain HTML, CSS and JavaScript, no build step and no framework. It is hosted free on GitHub Pages.
 2. **Pure engines, thin UI.** Scoring, records, territory and ghost matching are pure functions in their own files: data in, results out, no DOM and no storage. They can be tested in Node and reasoned about in isolation.
-3. **Derived, not stored.** XP, levels, leagues, records, vitamins, territory and ghost matches are all recomputed from workout history. Only raw inputs (workouts, streams, your settings and pause weeks) are stored, so changing a rule can never leave stale numbers behind.
+3. **Derived, not stored.** XP, levels, leagues, records, medals, trophies, territory and ghost matches are all recomputed from workout history. Only raw inputs (workouts, streams, your settings and pause weeks) are stored, so changing a rule can never leave stale numbers behind.
 4. **Cache the expensive parts.** Downloaded streams are cached in IndexedDB. Effort blocks (which depend only on heart rate and zone settings) are cached with a signature of those settings, and recomputed automatically when the settings change. Territory tiles are cached per workout.
 5. **App-shell layout.** Only the content area scrolls; the bottom bar sits outside it. That keeps the bar pinned on iOS, where rubber-band scrolling otherwise moves fixed elements.
 
@@ -394,7 +434,7 @@ flowchart TD
     L --> L2
     tiles --> G[Ghost.index<br/>same-route matches]
     acts --> G
-    L2 --> R[Records.compute<br/>records, vitamins, jar log]
+    L2 --> R[Records.compute<br/>records, medals, trophies, award log]
     G --> R
     T --> R
     R -->|record XP| LF[Final ledger<br/>XP earned per week]
@@ -418,7 +458,8 @@ leagues.js            → Leagues     (uses Scoring)
 territory.js          → Territory   (uses Scoring)
 ghost.js              → Ghost
 records.js            → Records     (uses Scoring)
-jar.js                jar + celebration UI
+art.js                mascot, medal and trophy drawing
+awards.js             medal wall, trophy shelf, celebrations, past-you card
 race.js               ghost race UI
 league-ui.js          badges, XP and streak icons, League page, rank celebrations
 app.js                storage, Strava, sync, views, router, settings
@@ -448,12 +489,12 @@ The app is a single page with hash routes:
 | `vm.cfg` | Settings: theme, accent, weekly goal, XP and league parameters, pause weeks, Strava Client ID/Secret |
 | `vm.tok` | Strava access and refresh tokens, athlete name |
 | `vm.acts` | Workout summaries (one compact record per workout) |
-| `vm.meta` | Sync markers, last backup time, vitamins and rank already celebrated |
+| `vm.meta` | Sync markers, last backup time, medals, trophies and rank already celebrated |
 | `vm.fx` | Effort-block cache, with the settings signature it was computed for |
 | `vm.tiles` | Territory tiles per workout, and whether they came from the full or simplified route |
 | `vm.list` | Workout-list filters (per-phone convenience) |
 
-**IndexedDB** (database `vitamin-me`, store `kv`), for larger data:
+**IndexedDB** (database `vitamin-me`, a name kept from the app's first version so caches survive, store `kv`), for larger data:
 
 | Key | Contents |
 |---|---|
@@ -466,15 +507,16 @@ The app is a single page with hash routes:
 ## File reference
 
 ```
-vitamin-me/
+vitamin-me/   (repository name)
 ├── index.html        Page shell, all styles and themes, dock, script tags
 ├── app.js            The application: storage, Strava auth and sync, views, router, settings
 ├── scoring.js        XP engine (pure)
 ├── leagues.js        Levels and leagues engine (pure)
-├── records.js        Records and vitamins engine (pure)
+├── records.js        Records, medals and trophies engine (pure)
 ├── territory.js      Territory grid engine (pure)
 ├── ghost.js          Same-route matching and race comparison (pure)
-├── jar.js            Vitamin jar drawing and the collection celebration
+├── art.js            The art system: Doppel, medals, trophies
+├── awards.js         Medal wall, trophy shelf, celebrations, past-you card
 ├── race.js           Ghost race page and replay
 ├── league-ui.js      Badges, icons, League page, rank celebrations
 ├── sw.js             Service worker: offline app shell
@@ -491,11 +533,12 @@ vitamin-me/
 | `index.html` | Shell and styles | Theme tokens for light and dark, accent colour variables, every component's CSS, the bottom bar, and a tiny pre-paint script that applies your saved theme before anything renders (no flash). |
 | `app.js` | Application core | localStorage and IndexedDB wrappers; theme handling; Strava OAuth (including the Safari-code fallback); incremental sync with a request budget; detail, heart-rate and race stream fetching and caching; the effort and tile caches; `getLedger()` pipeline; all main views (home, workout detail, progress, territory, settings); workout filters; maps; HR chart; backup and restore; router. |
 | `scoring.js` | Pure engine | `PARAMS` (every tunable number, which also generates the XP and leagues settings pages), heart-rate zones, effort-block detection from HR streams, and `ledger()`: per-workout breakdowns, weekly totals, streak multiplier, daily cap and rest bonus. |
-| `records.js` | Pure engine | Record tracking from best efforts and distances, PR bonus events, the vitamin definitions (colour, rule, repeatability), collection counts, progress to the next one, and the chronological log that fills the jar. |
+| `records.js` | Pure engine | Record tracking from best efforts and distances, PR bonus events, medal definitions (colour, emblem, rule, tier thresholds), trophy definitions (rule and progress), counts and tiers, progress to the next one, and the chronological award log. |
 | `territory.js` | Pure engine | Zoom-17 tile maths, route-to-tiles tracing, first-visit claiming, exploration XP, biggest-square search and connected areas. |
 | `ghost.js` | Pure engine | Same-route index (tile Jaccard similarity and distance tolerance), interpolation of time at distance and distance at time, and the race comparison (gap curve, km splits, biggest lead or deficit). |
-| `jar.js` | UI | Deterministic capsule layout, jar SVG, the home-screen jar button, tracking which collections have been celebrated, and the celebration card with drop animation and replay. |
-| `race.js` | UI | Ghost runner card on workouts, the race page, verdict and race story, gap chart, splits table, and the animated replay on the map. |
+| `art.js` | Drawing | The shared material rules, `mascotSvg(mood)`, `medalSvg(medal, {tier})`, `trophySvg(trophy)` and the wordmark. Pure string builders. |
+| `awards.js` | UI | Trophy case button, trophy shelf, medal wall, detail sheets, tracking what's been celebrated, the Meet Doppel intro, award celebrations, and the this-week vs last-week-you card. |
+| `race.js` | UI | Race past you card on workouts, the race page, verdict and race story, gap chart, splits table, and the animated replay on the map. |
 | `leagues.js` | Pure engine | League definitions and weekly minimums, the level curve, `rankOf(xp)`, and `replay()`: walks every week of history applying minimums, detraining, grace and pause weeks, returning the XP timeline, rank-change events and this week's status. |
 | `league-ui.js` | UI | XP and pulse-flame streak icons, the 12 procedurally drawn league badges, the home rank hero, the League page (ladder, this week, next league, XP chart, pause weeks) and the placement, level-up, promotion and drop cards. |
 | `sw.js` | Offline | Caches the app files so the app opens without a connection. Network-first, so updates arrive immediately when online. **Bump `VERSION` whenever files change.** |
@@ -517,13 +560,13 @@ Open the URL in **Safari**, tap **Share → Add to Home Screen**, and from then 
 Strava limits a new API app to its owner's account, so each person creates their own (free, about 5 minutes):
 
 1. At [strava.com/settings/api](https://www.strava.com/settings/api), create an application. Set **Authorization Callback Domain** to `<username>.github.io`, with no `https://` and no path.
-2. In Vitamin Me, go to **Settings → Strava**, paste the **Client ID** and **Client Secret**, and tap **Save and connect Strava**.
+2. In Doppel, go to **Settings → Strava**, paste the **Client ID** and **Client Secret**, and tap **Save and connect Strava**.
 3. Approve access on Strava's page, keeping **View data about your activities** ticked.
 
 If iOS returns you to Safari instead of the app, the page shows a code. Copy it, open the app from the home screen, and paste it under **Settings → Strava → Use code**.
 
 ### 4. Make the data flow
-In **Huawei Health → Me → Data sharing and authorization → Strava**, link your Strava account. New workouts then appear in Strava, and from there in Vitamin Me. Huawei's sync isn't retroactive, so only workouts recorded after linking arrive.
+In **Huawei Health → Me → Data sharing and authorization → Strava**, link your Strava account. New workouts then appear in Strava, and from there in Doppel. Huawei's sync isn't retroactive, so only workouts recorded after linking arrive.
 
 ---
 
@@ -550,7 +593,7 @@ const L = Scoring.ledger(activities, effortCache, {});   // XP earned
 L.terr = Territory.compute(activities, tiles, {});        // territory
 Territory.mergeIntoLedger(L, L.terr);
 L.ghost = Ghost.index(activities, tiles);                 // same-route matches
-const R = Records.compute(activities, L, {});             // records + vitamins
+const R = Records.compute(activities, L, {});             // records, medals, trophies
 Records.mergeIntoLedger(L, R);
 const Leagues = require('./leagues.js');
 const G = Leagues.replay(L.weeks, {}, new Date(), []);    // XP after minimums/detraining, rank
@@ -562,13 +605,13 @@ const G = Leagues.replay(L.weeks, {}, new Date(), []);    // XP after minimums/d
 
 **Adding an XP or league parameter.** Add a row to `PARAMS` in `scoring.js` (`[key, default, label, unit, group, step]`). It appears in Settings automatically and is available as `p.key` in the engines.
 
-**Adding a vitamin.** Add an entry to `VITAMINS` in `records.js` with a colour, an `n(state)` function returning how many times it's been collected, a `next(state)` progress function, and `once: true` for one-off milestones. Track any new state in `compute()`.
+**Adding a medal or trophy.** Medals go in `MEDALS` in `records.js`: a colour, an emblem (`icon` path or short `text`), `tiers` for bronze/silver/gold, an `n(state)` count and a `next(state)` progress function. Trophies go in `TROPHIES` with a `prog(state)` returning `[value, target]`. Track any new state in `compute()`; `art.js` draws them automatically.
 
 ---
 
 ## Known limitations
 
-- **Strava is the source of truth.** If a workout doesn't reach Strava (or arrives without heart rate or GPS), Vitamin Me can't score that part of it.
+- **Strava is the source of truth.** If a workout doesn't reach Strava (or arrives without heart rate or GPS), Doppel can't score that part of it.
 - **Heart-rate-based effort depends on the watch.** Wrist sensors can lag or spike; the 60-second dip tolerance and the vigorous threshold absorb most of it, and every threshold is adjustable.
 - **Max heart rate is estimated from age** unless you enter a measured value.
 - **Territory tiles start coarse.** Until a workout's full GPS route has been downloaded, its tiles come from Strava's simplified route.

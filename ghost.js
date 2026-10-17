@@ -1,5 +1,5 @@
 /* ================================================================
-   Vitamin Me — ghost runner (pure functions)
+   Doppel — ghost runner (pure functions)
    Same-route detection: two runs match when their territory tiles overlap
    (Jaccard ≥ SIM) and their distances are within ±DIST_TOL. Direction doesn't matter.
    Comparison works on time-at-distance from Strava streams (elapsed time, so stops count).

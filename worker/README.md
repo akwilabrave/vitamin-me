@@ -20,7 +20,7 @@ Everything below can be done in the Cloudflare dashboard in a browser. No comman
 1. **Cloudflare account.** Sign up at [dash.cloudflare.com](https://dash.cloudflare.com) (free plan).
 2. **KV namespace.** *Storage & Databases → KV → Create*. Name it `doppel-handoff`.
 3. **Worker.** *Compute → Workers & Pages → Create → Worker*, name it `doppel-auth`, deploy the hello-world, then *Edit code*. Replace everything with the contents of [`src/index.js`](src/index.js) and click *Deploy*. Its address looks like `https://doppel-auth.<your-subdomain>.workers.dev`.
-4. **Settings → Bindings → Add → KV namespace.** Variable name `HANDOFF`, namespace `doppel-handoff`.
+4. **Bind the KV namespace.** In the Worker, open the **Bindings** tab → **Add binding** → **KV namespace** → **Add binding**. In the **Variable name** field, *type* `HANDOFF` yourself (it's a name you choose, not something in a list; the code reads `env.HANDOFF`). From the **KV namespace** dropdown pick `doppel-handoff`, then **Add binding**.
 5. **Settings → Variables and secrets.** Add:
 
    | Name | Type | Value |

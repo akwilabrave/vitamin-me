@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Doppel privacy policy</title>
+<meta name="theme-color" content="#10151c">
+<style>
+  :root{ --accent:#7c5cff; --bg:#f2f5f8; --panel:#fff; --line:#dbe2ea; --text:#132030; --muted:#5d6b7a; }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#10151c; --panel:#18202a; --line:#243040; --text:#eef2f6; --muted:#8c99a8; } }
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+  main{max-width:680px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 20px) 16px 48px}
+  h1{font-family:ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;font-size:32px;letter-spacing:-.6px;margin:12px 0 4px}
+  h2{font-family:ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;font-size:20px;margin:30px 0 8px}
+  p,li{color:var(--text)} .muted{color:var(--muted)}
+  a{color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-size:14px;background:var(--panel);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{font-weight:650}
+  tr:last-child td{border-bottom:0}
+</style>
+</head>
+<body>
+<main>
+  <a href="./">← Doppel</a>
+  <h1>Privacy policy</h1>
+  <p class="muted">Effective 17 October 2026</p>
+
+  <p>Doppel is a free running and walking app made by Dylan Botha in South Africa. It is built so that your workouts stay on your own phone. This policy explains what that means in practice. It is written to meet the EU General Data Protection Regulation (GDPR) and South Africa's Protection of Personal Information Act (POPIA).</p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li>Your Strava workouts are stored only on your phone. Doppel has no database of users or workouts.</li>
+    <li>No accounts, no email addresses, no analytics, no advertising, no cookies for tracking.</li>
+    <li>Disconnecting Strava deletes every workout Doppel stored.</li>
+  </ul>
+
+  <h2>What Doppel uses, and where it lives</h2>
+  <table>
+    <tr><th>Data</th><th>Where</th><th>Why</th></tr>
+    <tr><td>Your Strava runs, walks and hikes: date, distance, time, heart rate, elevation, route, best efforts, and your first name</td><td>Only on your phone (browser storage of the installed app)</td><td>To score workouts, track records, medals and trophies, draw maps and race you against past runs</td></tr>
+    <tr><td>Strava access tokens</td><td>On your phone. During sign-in they pass through Doppel's sign-in service and are held there for at most 2 minutes</td><td>To read your workouts from Strava</td></tr>
+    <tr><td>Your settings (theme, goals, scoring rules)</td><td>Only on your phone, and in backup files you choose to save</td><td>To remember your preferences</td></tr>
+  </table>
+  <p>Doppel asks Strava only for permission to <b>view</b> activities you can see on Strava (the <code>activity:read</code> scope). It never changes anything on Strava and does not read activities you have set to "Only You". It imports runs, walks and hikes only.</p>
+
+  <h2>Services involved</h2>
+  <ul>
+    <li><b>Strava</b> provides your workout data through its API. Strava's <a href="https://www.strava.com/legal/privacy">Privacy Policy</a> applies to your Strava account and takes precedence over this policy where they conflict. Strava may monitor and collect usage data about Doppel's use of the Strava API and use it for any business purpose, including improving its services, supporting developers and checking compliance.</li>
+    <li><b>Doppel's sign-in service</b> runs on Cloudflare Workers. It exchanges Strava sign-in codes and refresh tokens, because the secret this requires cannot be stored in an app. It does not request, store or relay your workouts.</li>
+    <li><b>GitHub Pages</b> hosts the app's files. <b>OpenStreetMap</b> and <b>cdnjs</b> provide map tiles and the map library. Like any website, these providers see your IP address when your phone downloads from them, under their own privacy policies.</li>
+  </ul>
+  <p>Doppel does not sell, rent or share your data with anyone, and does not use it for AI or machine learning.</p>
+
+  <h2>How long data is kept</h2>
+  <ul>
+    <li>Workouts deleted on Strava are removed from Doppel at the next sync, and at least once a day while you use the app.</li>
+    <li>If you disconnect Strava in Doppel, or remove Doppel's access at <a href="https://www.strava.com/settings/apps">strava.com/settings/apps</a>, Doppel deletes every workout it stored the next time it runs.</li>
+    <li>Deleting the app from your home screen deletes everything it stored.</li>
+  </ul>
+
+  <h2>Your rights</h2>
+  <p>Because your data lives on your phone, you control it directly: you can view it in the app, export your settings as a backup, and delete everything under Settings, Backup and data. You also have the right to ask what personal information is processed about you, to have it corrected or deleted, to object to processing, and to complain to a supervisory authority: in South Africa, the <a href="https://inforegulator.org.za/">Information Regulator</a>. The legal basis for processing is your consent when you connect Strava, which you can withdraw at any time by disconnecting.</p>
+
+  <h2>Age</h2>
+  <p>Doppel is for people who meet Strava's own minimum age to hold a Strava account.</p>
+
+  <h2>Changes and contact</h2>
+  <p>If this policy changes, the new version will be posted here with a new date. Questions or requests: open an issue at <a href="https://github.com/akwilabrave/vitamin-me/issues">github.com/akwilabrave/vitamin-me/issues</a>.</p>
+</main>
+</body>
+</html>

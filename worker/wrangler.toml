@@ -1,0 +1,17 @@
+# Doppel token Worker. Deploy with:  npx wrangler deploy   (see worker/README.md)
+name = "doppel-auth"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+CLIENT_ID = "REPLACE_WITH_YOUR_STRAVA_CLIENT_ID"
+APP_URL = "https://akwilabrave.github.io/vitamin-me/app/"
+
+# Two-minute hand-off of freshly issued tokens, nothing else.
+[[kv_namespaces]]
+binding = "HANDOFF"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Secrets (never in this file):
+#   npx wrangler secret put CLIENT_SECRET
+#   npx wrangler secret put VERIFY_TOKEN

@@ -1,8 +1,9 @@
 {
+  "id": "./app/",
   "name": "Doppel",
   "short_name": "Doppel",
   "description": "You vs you. Get better than past you.",
-  "start_url": "./",
+  "start_url": "./app/",
   "scope": "./",
   "display": "standalone",
   "background_color": "#10151c",

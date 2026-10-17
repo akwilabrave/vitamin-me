@@ -10,7 +10,8 @@
 const K = { cfg:'vm.cfg', tok:'vm.tok', acts:'vm.acts', meta:'vm.meta', fx:'vm.fx', tiles:'vm.tiles' };
 const API = 'https://www.strava.com/api/v3';
 const FIRST_SYNC_DAYS = 365;
-const REQUEST_BUDGET = 40;            // detail/stream requests per sync (Strava allows 100 reads / 15 min)
+const REQUEST_BUDGET = 15;            // detail/stream requests per sync. Strava's read limit (200 / 15 min, 2,000 / day) is shared by every Doppel user
+const RECONCILE_MS = 20 * 3600e3;     // re-list everything at most this often, to drop workouts deleted on Strava (API Policy 6.3: within 48 h)
 try { localStorage.removeItem('vitaminme.v1'); } catch(e){}
 
 /* ---------------- storage ---------------- */
@@ -67,10 +68,37 @@ function applyTheme(){
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { applyTheme(); if (location.hash.startsWith('#/a/')) route(); });
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-/* ---------------- Strava auth ---------------- */
+/* ---------------- Strava auth ----------------
+   With a token Worker (config.js → authUrl): the Worker holds the client secret; the phone
+   creates a random key + verifier, Strava redirects to the Worker, and the phone claims the
+   tokens when it's back in focus (iPhone home-screen apps don't share storage with Safari).
+   Without one (legacy, single-player): the athlete's own Client ID and Secret, stored on this phone. */
+const AUTH = ((window.DOPPEL_CONFIG || {}).authUrl || '').replace(/\/+$/, '');
+const HANDOFF = 'vm.handoff';
 const redirectUri = () => location.origin + location.pathname;
+const b64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const randomKey = n => b64url(crypto.getRandomValues(new Uint8Array(n)));
+const sha256url = async s => b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))));
 
+function saveTok(j, prev = {}){
+  const tok = { access: j.access, refresh: j.refresh, expires: j.expires, athlete: j.athlete || prev.athlete };
+  store.set(K.tok, tok); return tok;
+}
+async function authPost(path, body){
+  let r;
+  try { r = await fetch(AUTH + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+  catch(e){ throw new Error('Could not reach the Doppel sign-in service. Check your connection.'); }
+  return { status: r.status, j: await r.json().catch(() => ({})) };
+}
+class Revoked extends Error {}
 async function tokenRequest(extra){
+  const prev = store.get(K.tok, {});
+  if (AUTH){
+    const { status, j } = await authPost('/refresh', { refresh_token: extra.refresh_token });
+    if (status === 401) throw new Revoked('Strava access was removed.');
+    if (status !== 200) throw new Error('Could not refresh Strava access. Try again shortly.');
+    return saveTok(j, prev);
+  }
   const c = cfg();
   if (!c.clientId || !c.clientSecret) throw new Error('Add your Strava Client ID and Secret in Settings first.');
   let r;
@@ -80,39 +108,96 @@ async function tokenRequest(extra){
     });
   } catch(e){ throw new Error('Could not reach Strava. Check your connection.'); }
   const j = await r.json().catch(() => ({}));
+  if (extra.grant_type === 'refresh_token' && (r.status === 400 || r.status === 401)) throw new Revoked('Strava access was removed.');
   if (!r.ok) throw new Error('Strava rejected the request: ' + (j.message || r.status) + '. Check Client ID/Secret.');
-  const prev = store.get(K.tok, {});
-  const tok = { access: j.access_token, refresh: j.refresh_token, expires: j.expires_at,
-                athlete: j.athlete ? { id: j.athlete.id, name: `${j.athlete.firstname} ${j.athlete.lastname}`.trim() } : prev.athlete };
-  store.set(K.tok, tok);
-  return tok;
+  return saveTok({ access: j.access_token, refresh: j.refresh_token, expires: j.expires_at,
+                   athlete: j.athlete ? { id: j.athlete.id, name: j.athlete.firstname || '' } : null }, prev);
 }
-async function accessToken(){
+async function accessToken(force = false){
   let t = store.get(K.tok, null);
   if (!t) throw new Error('Connect Strava in Settings first.');
-  if (t.expires * 1000 < Date.now() + 120000) t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: t.refresh });
+  if (force || t.expires * 1000 < Date.now() + 120000){
+    try { t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: t.refresh }); }
+    catch(e){ if (e instanceof Revoked) await accessEnded(); throw e; }
+  }
   return t.access;
 }
 class RateLimit extends Error {}
-async function api(path){
-  const token = await accessToken();
+async function api(path, retried = false){
+  const token = await accessToken(retried);
   let r;
   try { r = await fetch(API + path, { headers: { Authorization: 'Bearer ' + token } }); }
   catch(e){ throw new Error('Could not reach Strava. Check your connection.'); }
-  if (r.status === 401) throw new Error('Strava access was revoked or expired. Reconnect in Settings.');
+  if (r.status === 401){
+    if (!retried) return api(path, true);                // maybe just expired: refresh once, then retry
+    await accessEnded(); throw new Revoked('Strava access was removed.');
+  }
   if (r.status === 429) throw new RateLimit('Strava rate limit reached. The rest will load on a later sync.');
   if (r.status === 404) return null;
   if (!r.ok) throw new Error('Strava returned error ' + r.status + '.');
   return r.json();
 }
-function connectStrava(){
+
+/* Strava data must not outlive access to it: wipe everything that came from Strava. Settings stay. */
+async function wipeStravaData(){
+  [K.tok, K.acts, K.fx, K.tiles, HANDOFF].forEach(store.del);
+  const m = store.get(K.meta, {}); delete m.latest; delete m.lastSync; delete m.reconciled; store.set(K.meta, m);
+  await idb.clear(); invalidate();
+}
+async function accessEnded(){
+  if (!store.get(K.tok, null)) return;
+  await wipeStravaData();
+  setTimeout(() => toast('Strava access was removed, so Doppel deleted the workouts it had stored. Connect again any time.', true), 50);
+}
+async function disconnectStrava(){
+  const t = store.get(K.tok, null);
+  if (t){
+    try {
+      if (AUTH) await authPost('/revoke', { token: t.refresh });
+      else if (cfg().clientId && cfg().clientSecret)
+        await fetch('https://www.strava.com/oauth/revoke', { method: 'POST', headers: { Authorization: 'Basic ' + btoa(`${cfg().clientId}:${cfg().clientSecret}`) },
+          body: new URLSearchParams({ token: t.refresh }) });
+    } catch(e){ /* offline: the local wipe still happens; access can also be removed at strava.com/settings/apps */ }
+  }
+  await wipeStravaData();
+}
+
+async function connectStrava(){
+  if (AUTH){
+    const k = randomKey(16), v = randomKey(32);
+    store.set(HANDOFF, { k, v, t: Date.now() });
+    location.href = `${AUTH}/start?state=${k}.${await sha256url(v)}`;
+    return;
+  }
   const c = cfg();
   if (!c.clientId || !c.clientSecret){ toast('Save your Client ID and Secret first.', true); return; }
   location.href = 'https://www.strava.com/oauth/authorize?' + new URLSearchParams({
     client_id: c.clientId, response_type: 'code', redirect_uri: redirectUri(),
-    approval_prompt: 'auto', scope: 'read,activity:read_all'
+    approval_prompt: 'auto', scope: 'read,activity:read'
   });
 }
+/* Pick up tokens the Worker parked for us. Polls while a hand-off is open and the app is visible. */
+let claiming = false, claimTimer = null;
+async function claimHandoff(){
+  const h = store.get(HANDOFF, null);
+  if (!AUTH || !h || claiming) return;
+  if (Date.now() - h.t > 10 * 60000){ store.del(HANDOFF); return; }
+  claiming = true;
+  try {
+    const { status, j } = await authPost('/claim', { k: h.k, v: h.v });
+    if (status === 200){
+      store.del(HANDOFF); saveTok(j);
+      toast('Connected to Strava. Syncing…');
+      if (location.hash.startsWith('#/settings') || location.hash === '#/connected') location.hash = '#/';
+      claiming = false; await sync(); return;
+    }
+    if (status === 403 || status === 400) store.del(HANDOFF);
+  } catch(e){ /* offline: try again on the next tick */ }
+  claiming = false;
+  if (store.get(HANDOFF, null) && document.visibilityState === 'visible'){ clearTimeout(claimTimer); claimTimer = setTimeout(claimHandoff, 3000); }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') claimHandoff(); });
+
 async function exchangeCode(code){
   await tokenRequest({ code: code.trim(), grant_type: 'authorization_code' });
   toast('Connected to Strava. Syncing…');
@@ -120,7 +205,7 @@ async function exchangeCode(code){
   await sync();
 }
 let pendingCode = null;
-(function handleReturn(){
+(function handleReturn(){                                  // legacy flow only: Strava redirected back to this page
   const q = new URLSearchParams(location.search);
   if (!q.has('code') && !q.has('error')) return;
   history.replaceState(null, '', location.pathname + location.hash);
@@ -227,17 +312,28 @@ async function sync(){
   let msg = null, err = false;
   try {
     const acts = store.get(K.acts, {}), meta = store.get(K.meta, {});
-    const after = meta.latest ? meta.latest - 3600 : Math.floor(Date.now()/1000) - FIRST_SYNC_DAYS*86400;
-    let newest = meta.latest || 0, added = 0;
+    // Normally only what's new since the latest workout. About once a day: everything we hold, so
+    // workouts deleted (or made private) on Strava disappear here too.
+    const ids = Object.keys(acts), full = ids.length > 0 && Date.now() - (meta.reconciled || 0) > RECONCILE_MS;
+    const oldest = ids.length ? Math.min(...ids.map(id => Date.parse(acts[id].start) / 1000)) : null;
+    const after = full ? Math.floor(oldest) - 3600 : meta.latest ? meta.latest - 3600 : Math.floor(Date.now()/1000) - FIRST_SYNC_DAYS*86400;
+    let newest = meta.latest || 0, added = 0, complete = false;
+    const seen = new Set();
     for (let page = 1; page <= 10; page++){
-      const list = await api(`/athlete/activities?after=${after}&per_page=100&page=${page}`) || [];
+      const list = await api(`/athlete/activities?after=${after}&per_page=200&page=${page}`) || [];
       for (const a of list){
+        seen.add(String(a.id));
         newest = Math.max(newest, Math.floor(Date.parse(a.start_date)/1000));
         if (!Scoring.onFoot(a.sport_type || a.type)) continue;     // runs, walks and hikes only
         if (!acts[a.id]) added++;
         acts[a.id] = slim(a, acts[a.id]);
       }
-      if (list.length < 100) break;
+      if (list.length < 200){ complete = true; break; }
+    }
+    let removed = 0;
+    if (full && complete){
+      for (const id of ids) if (!seen.has(id)){ await forget(id, acts); removed++; }
+      meta.reconciled = Date.now();
     }
     store.set(K.acts, acts);
     store.set(K.meta, { ...meta, latest: newest, lastSync: Date.now() });
@@ -264,6 +360,7 @@ async function sync(){
 
     const pending = Object.values(store.get(K.acts, {})).filter(a => !fx[a.id]).length;
     msg ??= (added ? `Synced ${added} new workout${added > 1 ? 's' : ''}.` : 'Up to date.') +
+            (removed ? ` Removed ${removed} deleted on Strava.` : '') +
             (pending ? ` ${pending} older workout${pending > 1 ? 's' : ''} still to score on the next sync.` : '');
   } catch(e){ msg = e.message; err = true; }
   finally { syncing = false; setSyncBtn(false); invalidate(); route(); if (msg) toast(msg, err); celebrate(); }
@@ -315,11 +412,21 @@ function routeSvg(poly, size = 52){
 
 /* ---------------- views ---------------- */
 /* Strava attribution: required on every screen that shows Strava data. White logo on dark, black on light. */
+/* The official "Connect with Strava" button (brand guidelines: 48 px tall, links to Strava's OAuth). */
+const connectButton = () => `<button class="stravabtn" onclick="connectStrava()" aria-label="Connect with Strava">
+  <img src="btn-strava-connect.svg" alt="Connect with Strava" height="48" onerror="this.outerHTML='Connect with Strava'"></button>`;
 const poweredByStrava = () => `<div class="pbs"><img class="pbs-w" src="strava-powered-white.png" alt="Powered by Strava" width="176" height="60">
   <img class="pbs-b" src="strava-powered-black.png" alt="Powered by Strava" width="176" height="60"></div>`;
 
 let map = null;
 function teardownMap(){ stopRace(); if (map){ map.remove(); map = null; } if (terrMap){ terrMap.remove(); terrMap = null; } }
+/* Remove one workout and everything cached for it (deleted on Strava, or not a run or walk). */
+async function forget(id, acts){
+  delete acts[id];
+  const tiles = store.get(K.tiles, {}); if (tiles[id]){ delete tiles[id]; store.set(K.tiles, tiles); }
+  const fx = store.get(K.fx, null); if (fx?.data?.[id]){ delete fx.data[id]; store.set(K.fx, fx); }
+  for (const p of ['d', 'h', 'r', 's']) await idb.del(p + id);
+}
 /* Doppel only keeps runs, walks and hikes. Removes anything else synced by earlier versions, with its caches. */
 async function pruneNonFoot(){
   const acts = store.get(K.acts, {}), drop = Object.keys(acts).filter(id => !Scoring.onFoot(acts[id].type));
@@ -342,7 +449,7 @@ function viewHome(){
   if (!acts.length){
     html += tok
       ? `<div class="empty">${doppelSays('sleep', 'No workouts yet. Doppel is waiting.')}<button class="btn go" onclick="sync()">Sync from Strava</button></div>`
-      : `<div class="empty">${doppelSays('wave', "Hi, I'm Doppel: you, from every run you've ever done. Connect Strava and I'll bring them all in.")}<button class="btn go" onclick="location.hash='#/settings/strava'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
+      : `<div class="empty">${doppelSays('wave', "Hi, I'm Doppel: you, from every run you've ever done. Connect Strava and I'll bring them all in.")}${AUTH ? connectButton() : `<button class="btn go" onclick="location.hash='#/settings/strava'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button>`}</div>`;
     return html;
   }
 
@@ -410,6 +517,7 @@ function detailHtml(a, d, s){
   let html = `<button class="back" onclick="location.hash='#/'">Workouts</button>
     <div class="title">${esc(a.name)}</div>
     <div class="status">${esc(typeName(a.type))}, ${when(a.start)}${d?.device ? ', ' + esc(d.device) : ''}</div>
+    <a class="vos" href="https://www.strava.com/activities/${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View on Strava</a>
     <div id="map" class="${hasRoute ? '' : 'nomap'}">${hasRoute ? '' : 'No GPS route for this workout.'}</div>
     <div class="stats">
       <div class="hero"><div class="v">${dk ? dk + ' <span style="font-size:20px;color:var(--muted)">km</span>' : '-'}</div><div class="k">Distance</div></div>
@@ -699,7 +807,8 @@ function viewSettings(path = ''){
       ${row('#/settings/goals', 'Goals', `${nf(c.weeklyKm || 20)} km a week, ${nf(c.monthlyKm || 80)} km a month`)}
       ${row('#/settings/scoring', 'XP and leagues', n ? `${n} setting${n > 1 ? 's' : ''} changed from default` : 'Default settings')}
       ${row('#/settings/data', 'Backup and data', ago === null ? 'No backup yet' : ago === 0 ? 'Backed up today' : `Last backup ${ago} day${ago > 1 ? 's' : ''} ago`)}
-    </div>`;
+    </div>
+    <p class="hint"><a href="../privacy.html" target="_blank" rel="noopener">Privacy policy</a></p>`;
     return html;
   }
 
@@ -722,17 +831,20 @@ function viewSettings(path = ''){
       <p class="hint">Strava sent you back to Safari instead of the app. Copy this code, open Doppel from your home screen, and paste it under Settings, Strava.</p>
       <div class="field"><input id="codeOut" readonly value="${esc(pendingCode)}"></div>
       <button class="btn go" id="copyCode">Copy code</button>`;
-    html += tok
-      ? `<p>Connected as <b>${esc(tok.athlete?.name || 'your account')}</b>. Workouts sync when you open the app and when you tap sync.</p>
+    if (tok) html += `<p>Connected as <b>${esc(tok.athlete?.name || 'your account')}</b>. Workouts sync when you open the app and when you tap sync.</p>
          <button class="btn" id="resync">Re-sync last 12 months</button>
-         <button class="btn danger" id="disconnect">Disconnect Strava</button>`
-      : `<p class="hint">One-time setup. At <code>strava.com/settings/api</code>, create an application with Authorization Callback Domain <code>${esc(location.hostname)}</code>. Paste its Client ID and Client Secret here. They are stored only on this phone.</p>
+         <button class="btn danger" id="disconnect">Disconnect Strava</button>
+         <p class="hint">Disconnecting removes Doppel's access on Strava and deletes every workout Doppel stored on this phone. Your settings stay.</p>`;
+    else if (AUTH) html += `<p class="hint">Doppel reads your runs, walks and hikes from Strava. It only asks to view activities you can see on Strava, never to change anything, and your workouts stay on this phone.</p>
+         ${connectButton()}
+         ${store.get(HANDOFF, null) ? '<p class="hint">Waiting for Strava… If you approved it, switch back here and it connects by itself.</p>' : ''}`;
+    else html += `<p class="hint">One-time setup. At <code>strava.com/settings/api</code>, create an application with Authorization Callback Domain <code>${esc(location.hostname)}</code>. Paste its Client ID and Client Secret here. They are stored only on this phone.</p>
          <div class="field"><label for="cid">Client ID</label><input id="cid" inputmode="numeric" autocomplete="off" value="${esc(c.clientId || '')}"></div>
          <div class="field"><label for="csec">Client Secret</label><input id="csec" type="password" autocomplete="off" value="${esc(c.clientSecret || '')}"></div>
          <button class="btn go" id="connect">Save and connect Strava</button>
          <div class="field" style="margin-top:22px"><label for="codeIn">Got a code from Safari? Paste it here</label><input id="codeIn" autocomplete="off"></div>
          <button class="btn" id="useCode">Use code</button>`;
-    return html;
+    return html + poweredByStrava();
   }
 
   if (path === '/goals') return `${backTo('#/settings', 'Settings')}<h1 class="brand">Goals</h1>
@@ -800,11 +912,14 @@ function bindSettings(){
     if (clientId && clientSecret) setCfg({ clientId, clientSecret });
     try { await exchangeCode(code); } catch(e){ toast(e.message, true); }
   });
-  on('disconnect', () => { if (confirm('Disconnect Strava? Your stored workouts stay on this phone.')){ store.del(K.tok); route(); toast('Disconnected.'); } });
+  on('disconnect', async () => {
+    if (!confirm('Disconnect Strava? Doppel loses access and deletes every workout it stored on this phone. Your settings stay.')) return;
+    await disconnectStrava(); route(); toast('Disconnected. Workouts from Strava were deleted from this phone.');
+  });
   on('resync', () => { const m = store.get(K.meta, {}); delete m.latest; store.set(K.meta, m); sync(); });
   on('wipe', async () => {
     if (!confirm('Delete all workouts, tokens and settings from this phone?')) return;
-    Object.values(K).forEach(store.del); store.del('vm.shop'); await idb.clear(); invalidate(); applyTheme(); location.hash = '#/settings'; route(); toast('All data deleted.');
+    Object.values(K).forEach(store.del); store.del('vm.shop'); store.del(HANDOFF); await idb.clear(); invalidate(); applyTheme(); location.hash = '#/settings'; route(); toast('All data deleted.');
   });
   on('exportBk', exportBackup);
   on('importBk', () => $('bkFile').click());
@@ -882,7 +997,7 @@ function route(){
   else if (h === '#/progress'){ $('view').innerHTML = viewProgress(); bindAwards(); }
   else if (h === '#/territory'){ $('view').innerHTML = viewTerritory(); drawTerritory(); }
   else if (h.startsWith('#/ghost/')) viewGhost(h.slice(8));
-  else { $('view').innerHTML = viewHome(); if ($('wlist')) bindList(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
+  else { if (h === '#/connected') history.replaceState(null, '', '#/'); $('view').innerHTML = viewHome(); if ($('wlist')) bindList(); if (!syncing) setTimeout(celebrate, 400); const bb = document.querySelector('[data-backup]'); if (bb) bb.onclick = exportBackup; }
   markNav();
 }
 function markNav(){
@@ -909,7 +1024,8 @@ if (pendingCode) location.hash = '#/settings/strava';
   if (await pruneNonFoot()) invalidate();
   if (store.get(K.acts, null) && !fxGet()) { await rescoreAll(); invalidate(); }
   route();
+  claimHandoff();
   if (await ensureTiles()){ invalidate(); if (!location.hash.startsWith('#/a/')) route(); }
   if (store.get(K.tok, null) && Date.now() - (store.get(K.meta, {}).lastSync || 0) > 600000) sync();
 })();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => {});

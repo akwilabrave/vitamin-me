@@ -379,22 +379,31 @@ Everything drawn in Doppel (the mascot, medals, trophies, league badges and icon
 
 ## Strava attribution
 
-Every screen that shows Strava data (workouts, a workout, ghost race, progress, territory, league) ends with the official **Powered by Strava** logo: `strava-powered-white.png` in dark mode and `strava-powered-black.png` in light mode, shown small at the bottom of the page.
+Doppel follows Strava's [brand guidelines](https://developers.strava.com/guidelines/):
+
+- **Powered by Strava:** every screen that shows Strava data (workouts, a workout, race, progress, territory, league, the Strava settings page) and the landing page end with the official logo: `strava-powered-white.png` in dark mode and `strava-powered-black.png` in light mode, small at the bottom.
+- **Connect with Strava:** the sign-in button is Strava's official button (`app/btn-strava-connect.svg`, 48 px tall), linking to Strava's OAuth page.
+- **View on Strava:** every workout links back to the original activity, in bold Strava orange (`#FC5200`).
+- The name "Strava" is never part of Doppel's name or icon, and the landing page says Doppel is independent.
+
+The full compliance review against the API Agreement and API Policy (June 2026) lives in the roadmap doc.
 
 ## Your data, privacy and backups
 
-**Everything stays on your phone.** There's no server, no analytics and no account.
+**Everything stays on your phone.** There's no database, no analytics and no account. The only server is the [token Worker](worker/README.md), which holds Doppel's Strava client secret, swaps sign-in codes for tokens, and never sees a workout. The public [privacy policy](privacy.html) says the same in plain words.
 
 | Data | Where | Leaves the phone? |
 |---|---|---|
-| Strava Client ID and Secret, access tokens | localStorage | Only to Strava, to sign in |
+| Strava access and refresh tokens | localStorage | To Strava, and to the token Worker for refreshes (held there 2 minutes at sign-in, nothing stored after) |
 | Workouts, heart rate, routes | localStorage + IndexedDB | Never |
 | Settings, XP rules, pause weeks | localStorage | Only in backup files you save yourself |
 | Map tiles | Fetched from OpenStreetMap | Only the map area being viewed |
 
 - **Persistent storage:** the app asks iOS to protect its storage from automatic clearing (see **Settings → Backup and data**). Deleting the app from the home screen deletes its data.
+- **When access ends:** **Disconnect Strava** revokes Doppel's access and deletes every workout, stream and tile from the phone (settings stay). If access is removed on Strava's side, the next token refresh fails and the app does the same wipe itself.
+- **Deleted on Strava:** about once a day a sync re-lists every workout Doppel holds and removes any that are gone from Strava (API Policy 6.3: within 48 hours).
 - **Backups:** **Save backup** opens the share sheet, so you can save the file to iCloud Drive or Files. It holds your settings, XP and league rules, pause weeks and appearance, but **not** the Strava secret. Workouts aren't included, because they re-sync from Strava. **Restore from backup file** brings everything back.
-- **Sharing with friends:** each person installs from the same URL and connects their own Strava. Their data lives only on their phone; nothing is shared or stored centrally.
+- **Sharing with friends:** each person installs from the landing page and taps **Connect with Strava**; no credentials needed. Their data lives only on their phone; nothing is shared or stored centrally. Strava allows 10 athletes until the app passes Strava's review.
 
 ---
 
@@ -407,8 +416,10 @@ Every screen that shows Strava data (workouts, a workout, ghost race, progress, 
   - **Heart-rate stream:** for effort scoring.
   - **Workout detail:** for calories, splits, best efforts and the full GPS route.
   - **Distance + position stream:** for ghost races, fetched only when you open one.
-- **Request budget:** Strava limits how many requests an app can make (around 100 reads per 15 minutes). Each sync spends at most **40** detail and stream requests, newest workouts first. Older workouts fill in over the next few syncs and show "scoring…" until then. Everything fetched is cached, so each workout is downloaded once.
-- **Tokens:** they refresh automatically. You sign in to Strava once.
+- **Deletions:** at most every 20 hours a sync lists everything since your oldest stored workout instead of just what's new, and removes workouts that are no longer on Strava.
+- **Request budget:** Strava's read limit (200 per 15 minutes, 2,000 a day) is shared by every Doppel user. Each sync spends at most **15** detail and stream requests, newest workouts first. Older workouts fill in over the next few syncs and show "scoring…" until then. Everything fetched is cached, so each workout is downloaded once.
+- **Tokens:** they refresh automatically through the token Worker. You sign in to Strava once.
+- **Signing in:** the app creates a random key and a secret verifier, sends you to Strava via the Worker, and when you switch back it claims the tokens the Worker parked for it (2 minutes, verifier-locked). This hand-off exists because an iPhone home-screen app doesn't share storage with Safari, where Strava's redirect lands.
 
 ---
 
@@ -453,6 +464,7 @@ The page loads plain scripts in dependency order. The pure engines attach themse
 
 ```
 leaflet.min.js        maps (CDN)
+config.js             deployment settings (token Worker address)
 scoring.js            → Scoring
 leagues.js            → Leagues     (uses Scoring)
 territory.js          → Territory   (uses Scoring)
@@ -486,13 +498,15 @@ The app is a single page with hash routes:
 
 | Key | Contents |
 |---|---|
-| `vm.cfg` | Settings: theme, accent, weekly goal, XP and league parameters, pause weeks, Strava Client ID/Secret |
+| `vm.cfg` | Settings: theme, accent, weekly goal, XP and league parameters, pause weeks; Strava Client ID/Secret only in the legacy flow |
 | `vm.tok` | Strava access and refresh tokens, athlete name |
 | `vm.acts` | Workout summaries (one compact record per workout) |
 | `vm.meta` | Sync markers, last backup time, medals, trophies and rank already celebrated |
 | `vm.fx` | Effort-block cache, with the settings signature it was computed for |
 | `vm.tiles` | Territory tiles per workout, and whether they came from the full or simplified route |
 | `vm.list` | Workout-list filters (per-phone convenience) |
+| `vm.handoff` | While signing in only: the random key and verifier for claiming tokens from the Worker |
+| `doppel.browser` | Developer switch that lets the app run in a browser tab (set by adding `?browser` to the URL) |
 
 **IndexedDB** (database `vitamin-me`, a name kept from the app's first version so caches survive, store `kv`), for larger data:
 
@@ -508,64 +522,76 @@ The app is a single page with hash routes:
 
 ```
 vitamin-me/   (repository name)
-├── index.html        Page shell, all styles and themes, dock, script tags
-├── app.js            The application: storage, Strava auth and sync, views, router, settings
-├── scoring.js        XP engine (pure)
-├── leagues.js        Levels and leagues engine (pure)
-├── records.js        Records, medals and trophies engine (pure)
-├── territory.js      Territory grid engine (pure)
-├── ghost.js          Same-route matching and race comparison (pure)
-├── art.js            The art system: Doppel, medals, trophies
-├── awards.js         Trophies and medals grids, celebrations, this-week vs Doppel card
-├── race.js           Ghost race page and replay
-├── league-ui.js      Badges, icons, League page, rank celebrations
-├── sw.js             Service worker: offline app shell
-├── manifest.json     Home-screen install metadata
-├── strava-powered-white.png / -black.png   Strava attribution logos
-├── icon-180.png      Apple touch icon
-├── icon-192.png      App icon
-├── icon-512.png      App icon (large)
+├── index.html        Landing page: what Doppel is, install steps per platform, privacy link
+├── privacy.html      Privacy policy (GDPR, POPIA, Strava's usage-data statement)
+├── manifest.json     Install metadata: start_url app/, scope the whole site
+├── sw.js             Service worker for landing page and app: offline shell
+├── icon-180.png / icon-192.png / icon-512.png   App icons (Doppel mid-stride)
+├── app/
+│   ├── index.html    App shell, all styles and themes, dock, install-only gate, script tags
+│   ├── config.js     Deployment settings: the token Worker's address
+│   ├── app.js        The application: storage, Strava auth and sync, views, router, settings
+│   ├── scoring.js    XP engine (pure)
+│   ├── leagues.js    Levels and leagues engine (pure)
+│   ├── records.js    Records, medals and trophies engine (pure)
+│   ├── territory.js  Territory grid engine (pure)
+│   ├── ghost.js      Same-route matching and race comparison (pure)
+│   ├── art.js        The art system: Doppel, medals, trophies
+│   ├── awards.js     Trophies and medals grids, celebrations, this-week vs Doppel card
+│   ├── race.js       Race Doppel page and replay
+│   ├── league-ui.js  Badges, icons, League page, rank celebrations
+│   └── strava-powered-white.png / -black.png   Strava attribution logos
+├── worker/
+│   ├── src/index.js  Token Worker (Cloudflare): OAuth only
+│   ├── wrangler.toml Worker config for the command-line route
+│   └── README.md     Worker setup, step by step
 └── README.md         This file
 ```
 
 | File | Role | Details |
 |---|---|---|
-| `index.html` | Shell and styles | Theme tokens for light and dark, accent colour variables, every component's CSS, the bottom bar, and a tiny pre-paint script that applies your saved theme before anything renders (no flash). |
-| `app.js` | Application core | localStorage and IndexedDB wrappers; theme handling; Strava OAuth (including the Safari-code fallback); incremental sync with a request budget; detail, heart-rate and race stream fetching and caching; the effort and tile caches; `getLedger()` pipeline; all main views (home, workout detail, progress, territory, settings); workout filters; maps; HR chart; backup and restore; router. |
-| `scoring.js` | Pure engine | `PARAMS` (every tunable number, which also generates the XP and leagues settings pages), heart-rate zones, effort-block detection from HR streams, and `ledger()`: per-workout breakdowns, weekly totals, streak multiplier, daily cap and rest bonus. |
-| `records.js` | Pure engine | Record tracking from best efforts and distances, PR bonus events, medal definitions (colour, emblem, rule, tier thresholds), trophy definitions (rule and progress), counts and tiers, progress to the next one, and the chronological award log. |
-| `territory.js` | Pure engine | Zoom-17 tile maths, route-to-tiles tracing, first-visit claiming, exploration XP, biggest-square search and connected areas. |
-| `ghost.js` | Pure engine | Same-route index (tile Jaccard similarity and distance tolerance), interpolation of time at distance and distance at time, and the race comparison (gap curve, km splits, biggest lead or deficit). |
-| `art.js` | Drawing | The shared material rules, `mascotSvg(mood)`, `medalSvg(medal, {tier})`, `trophySvg(trophy)` and the wordmark. Pure string builders. |
-| `awards.js` | UI | Trophy case button, trophies and medals grids, detail sheets, tracking what's been celebrated, the Meet Doppel intro, award celebrations, and the this-week vs Doppel card. |
-| `race.js` | UI | Race Doppel card on workouts, the race page, verdict and race story, gap chart, splits table, and the animated replay on the map. |
-| `leagues.js` | Pure engine | League definitions and weekly minimums, the level curve, `rankOf(xp)`, and `replay()`: walks every week of history applying minimums, detraining, grace and pause weeks, returning the XP timeline, rank-change events and this week's status. |
-| `league-ui.js` | UI | XP and pulse-flame streak icons, the 12 procedurally drawn league badges, the home rank hero, the League page (ladder, this week, next league, XP chart, pause weeks) and the placement, level-up, promotion and drop cards. |
-| `sw.js` | Offline | Caches the app files so the app opens without a connection. Network-first, so updates arrive immediately when online. **Bump `VERSION` whenever files change.** |
-| `manifest.json` | Install | Name, colours, icons, standalone display. |
+| `index.html` | Landing page | Hero, features drawn with the app's own art, install steps for iPhone (Share → Add to Home Screen) and Android (a real Install button via `beforeinstallprompt`), and a "Strava is connected" banner for the sign-in hand-off. Opened from the home screen, it forwards straight to `app/`, which also keeps installs made before the move working with their data. |
+| `app/index.html` | Shell and styles | Theme tokens for light and dark, accent colour variables, every component's CSS, the bottom bar, the install-only gate (in a browser tab it sends you to the landing page), and a tiny pre-paint script that applies your saved theme before anything renders (no flash). |
+| `app/config.js` | Settings | `authUrl`: the token Worker's address. Empty means the legacy flow (your own Client ID and Secret in Settings). |
+| `app/app.js` | Application core | localStorage and IndexedDB wrappers; theme handling; Strava sign-in through the Worker (hand-off claim, refresh, revoke) with the legacy flow as fallback; wiping Strava data when access ends; incremental sync with daily deletion checks and a request budget; detail, heart-rate and race stream fetching and caching; the effort and tile caches; `getLedger()` pipeline; all main views; workout filters; maps; HR chart; backup and restore; router. |
+| `app/scoring.js` | Pure engine | `PARAMS` (every tunable number, which also generates the XP and leagues settings pages), heart-rate zones, effort-block detection from HR streams, and `ledger()`: per-workout breakdowns, weekly totals, streak multiplier, daily cap and rest bonus. |
+| `app/records.js` | Pure engine | Record tracking from best efforts and distances, PR bonus events, medal definitions (colour, emblem, rule, tier thresholds), trophy definitions (rule and progress), counts and tiers, progress to the next one, and the chronological award log. |
+| `app/territory.js` | Pure engine | Zoom-17 tile maths, route-to-tiles tracing, first-visit claiming, exploration XP, biggest-square search and connected areas. |
+| `app/ghost.js` | Pure engine | Same-route index (tile Jaccard similarity and distance tolerance), interpolation of time at distance and distance at time, and the race comparison (gap curve, km splits, biggest lead or deficit). |
+| `app/art.js` | Drawing | The shared material rules, `mascotSvg(mood)`, `medalSvg(medal, {tier})`, `trophySvg(trophy)` and the wordmark. Pure string builders. |
+| `app/awards.js` | UI | Trophy case button, trophies and medals grids, detail sheets, tracking what's been celebrated, the Meet Doppel intro, award celebrations, and the this-week vs Doppel card. |
+| `app/race.js` | UI | Race Doppel card on workouts, the race page, verdict and race story, gap chart, splits table, and the animated replay on the map. |
+| `app/leagues.js` | Pure engine | League definitions and weekly minimums, the level curve, `rankOf(xp)`, and `replay()`: walks every week of history applying minimums, detraining, grace and pause weeks, returning the XP timeline, rank-change events and this week's status. |
+| `app/league-ui.js` | UI | XP and pulse-flame streak icons, the 12 procedurally drawn league badges, the home rank hero, the League page (ladder, this week, next league, XP chart, pause weeks) and the placement, level-up, promotion and drop cards. |
+| `sw.js` | Offline | Caches the landing page and app files so Doppel opens without a connection. Network-first, so updates arrive immediately when online. **Bump `VERSION` whenever files change.** |
+| `manifest.json` | Install | Name, colours, icons, standalone display. `start_url` is `app/` and `scope` the whole site, so installing from the landing page opens the app. |
+| `privacy.html` | Policy | What Doppel processes, where it lives, the services involved, retention, rights, contact. Required by Strava API Policy 7.3. |
+| `worker/` | Token Worker | See [worker/README.md](worker/README.md). |
 
 ---
 
 ## Setup
 
-### 1. Host the app (once)
+### 1. Host the site (once)
 1. Put these files in a public GitHub repository.
 2. **Settings → Pages → Deploy from a branch → `main` / root.**
-3. The app is live at `https://<username>.github.io/<repo>/`.
+3. The landing page is live at `https://<username>.github.io/<repo>/`, the app at `.../app/`.
 
-### 2. Install on iPhone
-Open the URL in **Safari**, tap **Share → Add to Home Screen**, and from then on always open it from the home screen.
+### 2. The token Worker (once)
+Follow [worker/README.md](worker/README.md): a free Cloudflare Worker holds the Strava client secret. Then put its address in `app/config.js`, and set Strava's **Authorization Callback Domain** to the Worker's host. Until then the app uses the legacy flow below.
 
-### 3. Connect Strava (once per person)
-Strava limits a new API app to its owner's account, so each person creates their own (free, about 5 minutes):
+### 3. Install
+- **iPhone (iOS 16.4+):** open the landing page in Safari, tap **Share → Add to Home Screen**, then open Doppel from the home screen.
+- **Android:** open the landing page in Chrome and tap **Install Doppel** (or menu ⋮ → **Install app**).
 
-1. At [strava.com/settings/api](https://www.strava.com/settings/api), create an application. Set **Authorization Callback Domain** to `<username>.github.io`, with no `https://` and no path.
-2. In Doppel, go to **Settings → Strava**, paste the **Client ID** and **Client Secret**, and tap **Save and connect Strava**.
-3. Approve access on Strava's page, keeping **View data about your activities** ticked.
+Doppel only runs as an installed app. In a browser tab, `app/` sends you to the landing page. For development, add `?browser` to the app URL once.
 
-If iOS returns you to Safari instead of the app, the page shows a code. Copy it, open the app from the home screen, and paste it under **Settings → Strava → Use code**.
+### 4. Connect Strava
+Tap **Connect with Strava**, approve (keep **View data about your activities** ticked), and switch back to Doppel: it connects by itself within a few seconds.
 
-### 4. Make the data flow
+*Legacy flow (no Worker configured):* create your own app at [strava.com/settings/api](https://www.strava.com/settings/api) with callback domain `<username>.github.io`, then paste its Client ID and Secret under **Settings → Strava**. If iOS returns you to Safari, copy the code shown and paste it under **Settings → Strava → Use code**.
+
+### 5. Make the data flow
 In **Huawei Health → Me → Data sharing and authorization → Strava**, link your Strava account. New workouts then appear in Strava, and from there in Doppel. Huawei's sync isn't retroactive, so only workouts recorded after linking arrive.
 
 ---
@@ -576,18 +602,18 @@ In **Huawei Health → Me → Data sharing and authorization → Strava**, link 
 
 ```bash
 python3 -m http.server 8000
-# open http://localhost:8000
+# landing page: http://localhost:8000   app: http://localhost:8000/app/?browser
 ```
 
-Strava sign-in needs the callback domain to match, so full sign-in only works on the deployed domain. Everything else can be tested locally with data in storage.
+Strava sign-in needs the callback domain to match, so full sign-in only works against the deployed Worker. Everything else can be tested locally with data in storage. The Worker has no dependencies and can be unit-tested in Node by passing it a mocked `fetch` and KV.
 
 **Test the engines in Node.** The pure modules export themselves when `require`d:
 
 ```js
-const Scoring = require('./scoring.js'); global.Scoring = Scoring;
-const Territory = require('./territory.js');
-const Ghost = require('./ghost.js');
-const Records = require('./records.js');
+const Scoring = require('./app/scoring.js'); global.Scoring = Scoring;
+const Territory = require('./app/territory.js');
+const Ghost = require('./app/ghost.js');
+const Records = require('./app/records.js');
 
 const L = Scoring.ledger(activities, effortCache, {});   // XP earned
 L.terr = Territory.compute(activities, tiles, {});        // territory
@@ -595,7 +621,7 @@ Territory.mergeIntoLedger(L, L.terr);
 L.ghost = Ghost.index(activities, tiles);                 // same-route matches
 const R = Records.compute(activities, L, {});             // records, medals, trophies
 Records.mergeIntoLedger(L, R);
-const Leagues = require('./leagues.js');
+const Leagues = require('./app/leagues.js');
 const G = Leagues.replay(L.weeks, {}, new Date(), []);    // XP after minimums/detraining, rank
 ```
 
@@ -603,9 +629,9 @@ const G = Leagues.replay(L.weeks, {}, new Date(), []);    // XP after minimums/d
 1. Bump `VERSION` in `sw.js` with every change, or phones may keep serving the cached version.
 2. On the phone, fully close and reopen the app to pick up the new version.
 
-**Adding an XP or league parameter.** Add a row to `PARAMS` in `scoring.js` (`[key, default, label, unit, group, step]`). It appears in Settings automatically and is available as `p.key` in the engines.
+**Adding an XP or league parameter.** Add a row to `PARAMS` in `app/scoring.js` (`[key, default, label, unit, group, step]`). It appears in Settings automatically and is available as `p.key` in the engines.
 
-**Adding a medal or trophy.** Medals go in `MEDALS` in `records.js`: a colour, an emblem (`icon` path or short `text`), `tiers` for bronze/silver/gold, an `n(state)` count and a `next(state)` progress function. Trophies go in `TROPHIES` with a `prog(state)` returning `[value, target]`. Track any new state in `compute()`; `art.js` draws them automatically.
+**Adding a medal or trophy.** Medals go in `MEDALS` in `app/records.js`: a colour, an emblem (`icon` path or short `text`), `tiers` for bronze/silver/gold, an `n(state)` count and a `next(state)` progress function. Trophies go in `TROPHIES` with a `prog(state)` returning `[value, target]`. Track any new state in `compute()`; `art.js` draws them automatically.
 
 ---
 

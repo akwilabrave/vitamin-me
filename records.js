@@ -35,7 +35,7 @@
   const fl = (x, k) => Math.floor(x / k + 1e-9);
   const MEDALS = [
     { id: 'pr',       color: '#df4985', icon: I.up,       name: 'Record Breaker', desc: 'Every new personal record',                       tiers: [1, 10, 25], n: s => s.prs,              next: () => null, unit: '' },
-    { id: 'overtake', color: '#7f93ab', icon: I.ghost,    name: 'Overtaker',      desc: 'Every time you beat past you on a repeated route', tiers: [1, 10, 25], n: s => s.ghostWins,        next: () => null, unit: '' },
+    { id: 'overtake', color: '#7f93ab', icon: I.ghost,    name: 'Overtaker',      desc: 'Every time you beat Doppel on a repeated route', tiers: [1, 10, 25], n: s => s.ghostWins,        next: () => null, unit: '' },
     { id: 'tenk',     color: '#f3bf16', text: '10K',      name: 'Ten K',          desc: 'Every run of 10 km or more',                      tiers: [1, 10, 25], n: s => s.runs10,           next: s => s.runs10 ? null : [s.longestKm, 10], unit: 'km' },
     { id: 'half',     color: '#b5cc24', text: '21.1',     name: 'Half Marathon',  desc: 'Every half marathon (21.1 km)',                   tiers: [1, 5, 12],  n: s => s.runsHalf,         next: s => s.runsHalf ? null : [s.longestKm, 21.1], unit: 'km' },
     { id: 'century',  color: '#39ac43', text: '100',      name: 'Century',        desc: 'Every 100 km of running',                         tiers: [1, 5, 10],  n: s => fl(s.runKm, 100),   next: s => [s.runKm % 100, 100], unit: 'km' },
@@ -57,7 +57,7 @@
     { id: 'thenyou',   color: '#8a4ff0', icon: I.chevrons, name: 'Faster Than Then', desc: 'Run 5 km at least 10% faster than your first 5 km on record', prog: s => [s.fiveKGain, 10], unit: '% faster' },
     { id: 'thousand',  color: '#e2a21c', text: '1000',     name: 'Thousand Club',   desc: 'Run 1,000 km in total',                                     prog: s => [s.runKm, 1000], unit: 'km' },
     { id: 'unbroken',  color: '#ff6b2e', icon: I.flame,    name: 'Unbroken',        desc: 'Hold your streak for 26 weeks in a row',                    prog: s => [s.bestStreak, 26], unit: 'weeks' },
-    { id: 'hunter',    color: '#7f93ab', icon: I.ghost,    name: 'Ghost Hunter',    desc: 'Beat past you on 10 different routes',                      prog: s => [s.routesBeaten, 10], unit: 'routes' },
+    { id: 'hunter',    color: '#7f93ab', icon: I.ghost,    name: 'Ghost Hunter',    desc: 'Beat Doppel on 10 different routes',                      prog: s => [s.routesBeaten, 10], unit: 'routes' },
     { id: 'bigweek',   color: '#2f9e64', icon: I.calendar, name: 'Big Week',        desc: 'Run 75 km in a single week',                                prog: s => [s.bestWeekKm, 75], unit: 'km' },
     { id: 'everest',   color: '#25a5d0', icon: I.mountain, name: 'Everest',         desc: 'Climb 8,849 m in total, the height of Everest',             prog: s => [s.climb, 8849], unit: 'm' },
     { id: 'carto',     color: '#b5835a', icon: I.compass,  name: 'Cartographer',    desc: 'Explore 2,500 territory tiles',                             prog: s => [s.tiles, 2500], unit: 'tiles' },

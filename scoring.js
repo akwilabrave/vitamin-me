@@ -24,8 +24,6 @@
 
     ['kmRun',         4,  'Running',                           'XP/km','Distance XP', 0.5],
     ['kmWalk',        2,  'Walking and hiking',                'XP/km','Distance XP', 0.5],
-    ['kmRide',        1,  'Cycling',                           'XP/km','Distance XP', 0.5],
-    ['kmOther',       2,  'Other',                             'XP/km','Distance XP', 0.5],
 
     ['minWorkoutMin',15,  'Counts as a workout from',          'min',  'Consistency', 1],
     ['wk3Bonus',     15,  '3rd workout of the week',           'XP',   'Consistency', 1],
@@ -48,7 +46,9 @@
 
   const RUN = new Set(['Run', 'TrailRun', 'VirtualRun']);
   const WALK = new Set(['Walk', 'Hike']);
-  const RIDE = new Set(['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide', 'GravelRide']);
+  /* Doppel is a running and walking app: only these Strava sport types are imported. */
+  const ON_FOOT = new Set([...RUN, ...WALK]);
+  const onFoot = t => ON_FOOT.has(t);
 
   function zones(p) {
     const hrMax = p.maxHr > 0 ? p.maxHr : 208 - 0.7 * p.age;          // Tanaka
@@ -86,7 +86,7 @@
     return p.blockPts * Math.floor(effMin / p.blockMin + 1e-9) + p.bonusPts * Math.floor(effMin / p.bonusMin + 1e-9);
   }
   function kmRate(type, p) {
-    return RUN.has(type) ? p.kmRun : WALK.has(type) ? p.kmWalk : RIDE.has(type) ? p.kmRide : p.kmOther;
+    return RUN.has(type) ? p.kmRun : p.kmWalk;
   }
 
   /* Local calendar helpers (dates as 'YYYY-MM-DD' in the phone's timezone) */
@@ -176,6 +176,6 @@
     return { byAct, weeks, events, total, zones: zones(p), params: p };
   }
 
-  const api = { PARAMS, DEFAULTS, zones, effortBlocks, blockPoints, ledger, weekKey, dayKey, addDays };
+  const api = { PARAMS, DEFAULTS, zones, effortBlocks, blockPoints, ledger, weekKey, dayKey, addDays , ON_FOOT, onFoot};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Scoring = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

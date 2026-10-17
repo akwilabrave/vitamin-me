@@ -33,6 +33,7 @@ const idb = (() => {
   return {
     get: k => run('readonly', s => s.get(k)).catch(() => undefined),
     set: (k, v) => run('readwrite', s => s.put(v, k)).catch(() => {}),
+    del: k => run('readwrite', s => s.delete(k)).catch(() => {}),
     clear: () => run('readwrite', s => s.clear()).catch(() => {})
   };
 })();
@@ -231,9 +232,10 @@ async function sync(){
     for (let page = 1; page <= 10; page++){
       const list = await api(`/athlete/activities?after=${after}&per_page=100&page=${page}`) || [];
       for (const a of list){
+        newest = Math.max(newest, Math.floor(Date.parse(a.start_date)/1000));
+        if (!Scoring.onFoot(a.sport_type || a.type)) continue;     // runs, walks and hikes only
         if (!acts[a.id]) added++;
         acts[a.id] = slim(a, acts[a.id]);
-        newest = Math.max(newest, Math.floor(Date.parse(a.start_date)/1000));
       }
       if (list.length < 100) break;
     }
@@ -318,6 +320,16 @@ const poweredByStrava = () => `<div class="pbs"><img class="pbs-w" src="strava-p
 
 let map = null;
 function teardownMap(){ stopRace(); if (map){ map.remove(); map = null; } if (terrMap){ terrMap.remove(); terrMap = null; } }
+/* Doppel only keeps runs, walks and hikes. Removes anything else synced by earlier versions, with its caches. */
+async function pruneNonFoot(){
+  const acts = store.get(K.acts, {}), drop = Object.keys(acts).filter(id => !Scoring.onFoot(acts[id].type));
+  if (!drop.length) return false;
+  const tiles = store.get(K.tiles, {}), fx = store.get(K.fx, null);
+  for (const id of drop){ delete acts[id]; delete tiles[id]; if (fx?.data) delete fx.data[id];
+    for (const p of ['d', 'h', 'r', 's']) await idb.del(p + id); }
+  store.set(K.acts, acts); store.set(K.tiles, tiles); if (fx) store.set(K.fx, fx);
+  return true;
+}
 const sorted = () => Object.values(store.get(K.acts, {})).sort((x,y) => y.start.localeCompare(x.start));
 
 function viewHome(){
@@ -329,8 +341,8 @@ function viewHome(){
 
   if (!acts.length){
     html += tok
-      ? `<div class="empty">${doppelSays('sleep', 'No workouts yet. Past you is waiting.')}<button class="btn go" onclick="sync()">Sync from Strava</button></div>`
-      : `<div class="empty">${doppelSays('wave', "Hi, I'm Doppel: past you. Connect Strava and I'll bring every run you've ever done.")}<button class="btn go" onclick="location.hash='#/settings/strava'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
+      ? `<div class="empty">${doppelSays('sleep', 'No workouts yet. Doppel is waiting.')}<button class="btn go" onclick="sync()">Sync from Strava</button></div>`
+      : `<div class="empty">${doppelSays('wave', "Hi, I'm Doppel: you, from every run you've ever done. Connect Strava and I'll bring them all in.")}<button class="btn go" onclick="location.hash='#/settings/strava'">${c.clientId ? 'Connect Strava' : 'Set up Strava'}</button></div>`;
     return html;
   }
 
@@ -471,16 +483,11 @@ function drawMap(poly, freshTiles){
 /* ---------------- workout list: filters and sorting ----------------
    State is a per-phone convenience (not backed up). */
 const LIST_KEY = 'vm.list', PAGE = 30;
-const TYPE_GROUPS = [
-  ['run', 'Runs', t => RUNS.has(t)], ['walk', 'Walks', t => t === 'Walk' || t === 'Hike'],
-  ['ride', 'Rides', t => /Ride$/.test(t)], ['strength', 'Strength', t => t === 'WeightTraining' || t === 'Crossfit'],
-  ['other', 'Other', t => !RUNS.has(t) && t !== 'Walk' && t !== 'Hike' && !/Ride$/.test(t) && t !== 'WeightTraining' && t !== 'Crossfit'],
-];
 const PERIODS = [['all', 'All time'], ['week', 'This week'], ['month', 'This month'], ['30', '30 days'], ['year', 'This year']];
 const SORTS = [['new', 'Newest'], ['old', 'Oldest'], ['dist', 'Distance'], ['time', 'Duration'],
                ['pts', 'XP'], ['pace', 'Pace'], ['hr', 'Heart rate']];
 const HIGHLIGHTS = [['any', 'Everything'], ['pr', 'Records'], ['ghost', 'Ghost wins'], ['tiles', 'New tiles'], ['route', 'With route']];
-const listState = () => ({ type: 'all', period: 'all', sort: 'new', hl: 'any', n: PAGE, ...store.get(LIST_KEY, {}) });
+const listState = () => ({ period: 'all', sort: 'new', hl: 'any', n: PAGE, ...store.get(LIST_KEY, {}) });
 
 function filteredActs(acts){
   const f = listState(), L = getLedger(), now = new Date();
@@ -488,8 +495,7 @@ function filteredActs(acts){
              : f.period === 'month' ? new Date(now.getFullYear(), now.getMonth(), 1)
              : f.period === '30' ? new Date(Date.now() - 30 * 86400000)
              : f.period === 'year' ? new Date(now.getFullYear(), 0, 1) : null;
-  const tg = TYPE_GROUPS.find(g => g[0] === f.type);
-  let xs = acts.filter(a => (!tg || tg[2](a.type)) && (!from || new Date(a.start) >= from));
+  let xs = acts.filter(a => !from || new Date(a.start) >= from);
   if (f.hl === 'pr') xs = xs.filter(a => L.byAct[a.id]?.prs?.length);
   if (f.hl === 'ghost') xs = xs.filter(a => L.ghost?.byAct[a.id]?.beatPrev);
   if (f.hl === 'tiles') xs = xs.filter(a => L.terr?.byAct[a.id]?.fresh.length);
@@ -502,12 +508,9 @@ function filteredActs(acts){
   return xs.sort(by);
 }
 function listControlsHtml(acts){
-  const f = listState(), present = TYPE_GROUPS.filter(g => acts.some(a => g[2](a.type)));
+  const f = listState();
   const opt = (list, v) => list.map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('');
   return `<div class="filters">
-    ${present.length > 1 ? `<div class="chips" role="group" aria-label="Workout type">
-      <button data-ft="all" aria-pressed="${f.type === 'all'}">All</button>
-      ${present.map(g => `<button data-ft="${g[0]}" aria-pressed="${f.type === g[0]}">${g[1]}</button>`).join('')}</div>` : ''}
     <div class="selects">
       <label><span>Period</span><select data-fs="period">${opt(PERIODS, f.period)}</select></label>
       <label><span>Show</span><select data-fs="hl">${opt(HIGHLIGHTS, f.hl)}</select></label>
@@ -518,7 +521,7 @@ function workoutListHtml(acts){
   const f = listState(), xs = filteredActs(acts), L = getLedger();
   const dist = xs.reduce((s, a) => s + a.dist, 0) / 1000, time = xs.reduce((s, a) => s + a.moving, 0);
   const pts = xs.reduce((s, a) => s + (L.byAct[a.id]?.total || 0), 0);
-  const filtered = f.type !== 'all' || f.period !== 'all' || f.hl !== 'any';
+  const filtered = f.period !== 'all' || f.hl !== 'any';
   let html = `<div class="listsum"><span><b>${xs.length}</b> workout${xs.length === 1 ? '' : 's'}</span>${dist >= 0.05 ? `<span><b>${nf(dist, 1)}</b> km</span>` : ''}
     <span><b>${dur(time)}</b></span><span class="xpinl"><b>+${nf(pts)}</b> ${xpIcon(14)}</span>${filtered ? '<button class="linkbtn" data-freset>Clear filters</button>' : ''}</div>`;
   if (!xs.length) return html + `<div class="empty">No workouts match these filters.</div>`;
@@ -543,9 +546,8 @@ function bindList(){
     const fl = document.querySelector('.filters'); if (fl) fl.outerHTML = listControlsHtml(acts);
     $('wlist').innerHTML = workoutListHtml(acts); bindList();
   };
-  document.querySelectorAll('[data-ft]').forEach(b => b.onclick = () => update({ type: b.dataset.ft }));
   document.querySelectorAll('[data-fs]').forEach(s => s.onchange = () => update({ [s.dataset.fs]: s.value }));
-  const r = document.querySelector('[data-freset]'); if (r) r.onclick = () => update({ type: 'all', period: 'all', hl: 'any' });
+  const r = document.querySelector('[data-freset]'); if (r) r.onclick = () => update({ period: 'all', hl: 'any' });
   const m = document.querySelector('[data-fmore]'); if (m) m.onclick = () => {
     store.set(LIST_KEY, { ...listState(), n: listState().n + PAGE }); $('wlist').innerHTML = workoutListHtml(acts); bindList();
   };
@@ -768,7 +770,7 @@ function viewSettings(path = ''){
       <button class="btn go" id="exportBk">Save backup</button>
       <button class="btn" id="importBk">Restore from backup file</button><input type="file" id="bkFile" accept="application/json,.json" hidden>
       <h2>Where your data lives</h2>
-      <p class="hint">Everything is stored only on this phone: ${Object.keys(store.get(K.acts, {})).length} workouts, your shop and your settings. Nothing is sent anywhere except your own requests to Strava.</p>
+      <p class="hint">Everything is stored only on this phone: ${Object.keys(store.get(K.acts, {})).length} runs and walks, and your settings. Nothing is sent anywhere except your own requests to Strava.</p>
       <p class="hint">${persisted === true ? 'Storage is protected: iOS won\'t clear it to free up space.'
          : persisted === false ? 'Storage isn\'t protected yet. iOS may clear it if the phone runs very low on space, so keep a backup.' : ''}
          Deleting the app from your home screen deletes its data.</p>
@@ -904,6 +906,7 @@ applyTheme();
 ensurePersistent();
 if (pendingCode) location.hash = '#/settings/strava';
 (async () => {
+  if (await pruneNonFoot()) invalidate();
   if (store.get(K.acts, null) && !fxGet()) { await rescoreAll(); invalidate(); }
   route();
   if (await ensureTiles()){ invalidate(); if (!location.hash.startsWith('#/a/')) route(); }

@@ -2,7 +2,7 @@
 
 **You vs you. Get better than past you.**
 
-A running app for iPhone where your only rival is who you were yesterday. Your workouts become XP and a ranked ladder of 12 leagues, records, medals and trophies, a territory map, and races against past you on the same routes. Your guide is **Doppel**, a ghost in a sweatband and running shoes: past you, waiting to be beaten. It reads your training from Strava, runs entirely on your phone, and costs nothing to host.
+A running app for iPhone where your only rival is who you were yesterday. Your workouts become XP and a ranked ladder of 12 leagues, records, medals and trophies, a territory map, and races against Doppel on the same routes. Your guide is **Doppel**, a ghost in a sweatband and running shoes: you, from every run you've ever done, waiting to be beaten. It reads your training from Strava, runs entirely on your phone, and costs nothing to host.
 
 > Built for a Huawei Watch Fit 4 → Huawei Health → Strava setup, but it works with any device that syncs to Strava.
 
@@ -17,7 +17,7 @@ A running app for iPhone where your only rival is who you were yesterday. Your w
 5. [Records](#records)
 6. [Medals and trophies](#medals-and-trophies)
 7. [Territory](#territory)
-8. [Racing past you](#racing-past-you)
+8. [Racing Doppel](#racing-doppel)
 9. [Levels and leagues](#levels-and-leagues)
 10. [The art system](#the-art-system)
 11. [Strava attribution](#strava-attribution)
@@ -43,10 +43,10 @@ It answers one question after every workout: *what did that session earn me?* Th
 | **XP** | Effort, distance, consistency, records, exploration | Your level and league |
 | **Leagues** | Training consistently enough to climb, and to stay | 60 levels across 12 leagues, which you can also lose |
 | **Records** | Getting faster or going further | Bonus XP |
-| **Medals** | Repeatable feats and habits, bronze → silver → gold | Nothing; they hang on your medal wall |
-| **Trophies** | Ten once-off, hard milestones | Nothing; they stand on your trophy shelf |
+| **Medals** | Repeatable feats and habits, bronze → silver → gold | Nothing; they're your collection |
+| **Trophies** | Ten once-off, hard milestones | Nothing; they're your collection |
 | **Territory** | Running somewhere new | XP per new tile |
-| **Racing past you** | Beating your past self on the same route | A race, and the Overtaker medal |
+| **Racing Doppel** | Beating your past self on the same route | A race, and the Overtaker medal |
 
 Everything is **derived from your workout history**. Nothing is stored as "you are level 13"; the app replays your workouts every time. That's why you can change any rule and your whole history is re-scored consistently.
 
@@ -79,8 +79,8 @@ The bottom bar has five buttons:
 
 | Icon | Tab | What's there |
 |---|---|---|
-| Pulse line | **Workouts** | Your league badge, level and XP bar, streak, trophy count, weekly and monthly running, this week vs last-week you, and the filterable workout list |
-| Trophy | **Progress** | Trophy shelf, medal wall, the territory card, and your records |
+| Pulse line | **Workouts** | Your league badge, level and XP bar, streak, trophy count, weekly and monthly running, this week vs Doppel from last week, and the filterable workout list |
+| Trophy | **Progress** | Trophies, medals, the territory card, and your records |
 | Shield | **League** | Your badge and rank, this week's minimum, the next league, the ladder, XP history and pause weeks |
 | Arrows | **Sync** | Fetches new workouts from Strava (asks first) |
 | Sliders | **Settings** | Appearance, Strava, goals, scoring rules, backup and data |
@@ -91,9 +91,8 @@ The bottom bar has five buttons:
 - **XP card:** XP earned this week. If your league has a weekly minimum, a line under the cards says how much is left to hold your league.
 - **Trophy case** (top right): your latest trophy and how many of the 10 you've won. Tap it to open Progress.
 - **Running this week / this month:** side by side, each with a bar toward its goal (weekly and monthly km goals are set under **Settings → Goals**).
-- **You vs last-week you:** how far you've run this week against how far you had run by the same moment last week. Doppel looks smug when past you is ahead, and worried when you are.
+- **You vs Doppel from last week:** how far you've run this week against how far you had run by the same moment last week. Doppel looks smug when it's ahead, and worried when you are.
 - **Workout list:** with filters:
-  - **Type chips:** All, Runs, Walks, Rides, Strength, Other. Only the types you have are shown.
   - **Period:** All time, This week, This month, 30 days, This year.
   - **Show:** Everything, Records, Ghost wins, New tiles, With route.
   - **Sort:** Newest, Oldest, Distance, Duration, XP, Pace, Heart rate.
@@ -104,12 +103,12 @@ Tap any workout to see:
 - **Map:** the route, with any territory tiles that run claimed.
 - **Stats:** distance, moving time, pace or speed, calories, average and max heart rate, elevation.
 - **XP breakdown:** every line that earned XP (effort blocks, distance, streak boost, consistency, records, exploration).
-- **Race past you card:** if you've run this route before.
+- **Race Doppel card:** if you've run this route before.
 - **Heart-rate chart:** with your effort zone shaded, so you can see where XP was earned.
 - **Kilometre splits:** for runs and walks.
 
 ### Progress
-The trophy shelf, the medal wall, the territory summary and your records. Tap any medal or trophy for its rule, your progress and the workout that won it.
+The trophies and medals grids, the territory summary and your records. Tap any medal or trophy for its rule, your progress and the workout that won it.
 
 ---
 
@@ -120,7 +119,7 @@ XP (the hexagon-and-bolt icon) is built from five ingredients. Each is designed 
 | Ingredient | Rewards | Default |
 |---|---|---|
 | Effort | Sustained time with your heart rate in the effort zone | 10 XP per 10 continuous minutes, +25 per 30 |
-| Distance | Volume | 4 XP/km running, 2 walking, 1 cycling |
+| Distance | Volume | 4 XP/km running, 2 walking and hiking |
 | Consistency | Showing up regularly | +15 for the week's 3rd workout, +25 for the 4th, streak boost |
 | Records | Getting faster or going further | +50 per beaten record, +30 per new longest run |
 | Exploration | Running somewhere new | +2 per new territory tile |
@@ -158,7 +157,7 @@ A **daily cap of 90 effective minutes** stops the system from rewarding overtrai
 
 $$P_{\text{distance}} = \text{rate} \times \text{km}$$
 
-with the rate set by activity type (running 4, walking and hiking 2, cycling 1, anything else 2).
+with the rate set by activity type (running 4, walking and hiking 2).
 
 ### 4. Consistency
 
@@ -207,13 +206,13 @@ The **first** time you run a distance, it sets the record without a bonus. Only 
 
 Medals and trophies are **achievements, not currency**. They never add XP. Both are re-derived from your full history, like everything else.
 
-### Medals: the medal wall
+### Medals
 Medals are **repeatable**. Each one counts up every time you earn it, and its disc turns **bronze → silver → gold** as the count passes its tier thresholds (silver and gold also get one and two stars). The ribbon keeps the medal's own colour.
 
 | Medal | Earned | Silver / Gold at |
 |---|---|---|
 | **Record Breaker** | Every new personal record | 10 / 25 |
-| **Overtaker** | Every time you beat past you on a repeated route | 10 / 25 |
+| **Overtaker** | Every time you beat Doppel on a repeated route | 10 / 25 |
 | **Ten K** | Every run of 10 km or more | 10 / 25 |
 | **Half Marathon** | Every run of 21.1 km or more | 5 / 12 |
 | **Century** | Every 100 km of running | 5 / 10 |
@@ -227,8 +226,8 @@ Medals are **repeatable**. Each one counts up every time you earn it, and its di
 | **Early Bird** | Every 10 workouts started before 07:00 | 5 / 10 |
 | **Recovery** | Every 5 rest-day bonuses | 5 / 12 |
 
-### Trophies: the trophy shelf
-Trophies are **once-off and hard**: each is a line past you never crossed. Every trophy is the same gold cup with its own emblem and gem; unwon ones stand on the shelf as silhouettes with a progress bar.
+### Trophies
+Trophies are **once-off and hard**: each is a line Doppel never crossed. Every trophy is the same gold cup with its own emblem and gem; unwon ones show as silhouettes with a progress bar.
 
 | Trophy | To win it |
 |---|---|
@@ -236,7 +235,7 @@ Trophies are **once-off and hard**: each is a line past you never crossed. Every
 | **Faster Than Then** | Run 5 km at least 10% faster than your first 5 km on record |
 | **Thousand Club** | Run 1,000 km in total |
 | **Unbroken** | Hold your streak for 26 weeks in a row |
-| **Ghost Hunter** | Beat past you on 10 different routes |
+| **Ghost Hunter** | Beat Doppel on 10 different routes |
 | **Big Week** | Run 75 km in a single week |
 | **Everest** | Climb 8,849 m in total |
 | **Cartographer** | Explore 2,500 territory tiles |
@@ -247,7 +246,7 @@ For *Faster Than Then*, the improvement is
 
 $$\text{gain} = \frac{t_\text{first 5 km} - t_\text{best 5 km since}}{t_\text{first 5 km}} \times 100\% \geq 10\%$$
 
-A route for *Ghost Hunter* is identified by the first run on it, so beating past you twice on the same loop counts once.
+A route for *Ghost Hunter* is identified by the first run on it, so beating Doppel twice on the same loop counts once.
 
 ### Celebrations
 - **Meet Doppel:** the first time the app opens after an update to Doppel (or on a new install), Doppel introduces itself instead of flooding you with every medal from your history.
@@ -276,9 +275,9 @@ across, which is about **275 m in Pretoria**. The grid works anywhere on Earth, 
 
 ---
 
-## Racing past you
+## Racing Doppel
 
-Run the same route twice and past you, Doppel, is waiting to race.
+Run the same route twice and Doppel, your past self on that route, is waiting to race.
 
 **How routes are matched.** Two runs are the same route when their territory tiles overlap strongly and their distances are close:
 
@@ -286,14 +285,14 @@ $$J(A, B) = \frac{|A \cap B|}{|A \cup B|} \geq 0.6 \qquad\text{and}\qquad |d_A -
 
 Direction doesn't matter: a loop run the other way still matches. No naming or setup is needed.
 
-**On a workout.** A **Race past you** card compares your pace with the last time you ran the route, and tells you how many times you've run it.
+**On a workout.** A **Race Doppel** card compares your pace with the last time you ran the route, and tells you how many times you've run it.
 
 **The race page:**
 - **Opponent:** race **Last time** or **Your best here**.
-- **Verdict:** e.g. "You beat past you by 1:05", with a short race story (biggest lead, comebacks, where it was decided).
+- **Verdict:** e.g. "You beat Doppel by 1:05", with a short race story (biggest lead, comebacks, where it was decided).
 - **Replay:** you and Doppel move along today's route on the map at 90× speed, with a live clock and the gap in metres.
 - **Gap chart:** your lead or deficit over the whole distance.
-- **Kilometre table:** your split vs past you's, and the running gap.
+- **Kilometre table:** your split vs Doppel's, and the running gap.
 
 The comparison uses **elapsed** time, so stops count, as they would in a real race.
 
@@ -374,7 +373,7 @@ Everything drawn in Doppel (the mascot, medals, trophies, league badges and icon
 - **Emblems:** 24-unit line icons with 2 px round strokes, in a contrasting ink.
 - **Type:** rounded, heavy.
 
-**Doppel** is a pale ghost whose body melts into a streaming tail when running. It wears a **sweatband and running shoes in your accent colour**, so it always matches your theme. It has seven moods: `run`, `cheer`, `smug`, `wow`, `sleep`, `sad` and `wave`. Doppel appears in the header, empty states, celebrations, the past-you card, the race page (its mood depends on who won) and on the map as the runner you're racing. The app icon is Doppel mid-stride.
+**Doppel** is a pale ghost whose body melts into a streaming tail when running. It wears a **sweatband and running shoes in your accent colour**, so it always matches your theme. It has seven moods: `run`, `cheer`, `smug`, `wow`, `sleep`, `sad` and `wave`. Doppel appears in the header, empty states, celebrations, the this-week card, the race page (its mood depends on who won) and on the map as the runner you're racing. The app icon is Doppel mid-stride.
 
 ---
 
@@ -402,6 +401,7 @@ Every screen that shows Strava data (workouts, a workout, ghost race, progress, 
 ## Syncing with Strava
 
 - **First sync:** pulls the last **12 months**. Later syncs ask only for workouts since the newest one you have (with a one-hour overlap).
+- **Runs, walks and hikes only:** Run, Trail run, Treadmill run, Walk and Hike are imported; every other Strava sport type is skipped.
 - **When it syncs:** automatically when you open the app (at most every 10 minutes), and when you tap **Sync** (after a confirmation).
 - **Extra requests per workout:** some features need more than the summary:
   - **Heart-rate stream:** for effort scoring.
@@ -459,7 +459,7 @@ territory.js          → Territory   (uses Scoring)
 ghost.js              → Ghost
 records.js            → Records     (uses Scoring)
 art.js                mascot, medal and trophy drawing
-awards.js             medal wall, trophy shelf, celebrations, past-you card
+awards.js             trophies and medals grids, celebrations, this-week vs Doppel card
 race.js               ghost race UI
 league-ui.js          badges, XP and streak icons, League page, rank celebrations
 app.js                storage, Strava, sync, views, router, settings
@@ -516,7 +516,7 @@ vitamin-me/   (repository name)
 ├── territory.js      Territory grid engine (pure)
 ├── ghost.js          Same-route matching and race comparison (pure)
 ├── art.js            The art system: Doppel, medals, trophies
-├── awards.js         Medal wall, trophy shelf, celebrations, past-you card
+├── awards.js         Trophies and medals grids, celebrations, this-week vs Doppel card
 ├── race.js           Ghost race page and replay
 ├── league-ui.js      Badges, icons, League page, rank celebrations
 ├── sw.js             Service worker: offline app shell
@@ -537,8 +537,8 @@ vitamin-me/   (repository name)
 | `territory.js` | Pure engine | Zoom-17 tile maths, route-to-tiles tracing, first-visit claiming, exploration XP, biggest-square search and connected areas. |
 | `ghost.js` | Pure engine | Same-route index (tile Jaccard similarity and distance tolerance), interpolation of time at distance and distance at time, and the race comparison (gap curve, km splits, biggest lead or deficit). |
 | `art.js` | Drawing | The shared material rules, `mascotSvg(mood)`, `medalSvg(medal, {tier})`, `trophySvg(trophy)` and the wordmark. Pure string builders. |
-| `awards.js` | UI | Trophy case button, trophy shelf, medal wall, detail sheets, tracking what's been celebrated, the Meet Doppel intro, award celebrations, and the this-week vs last-week-you card. |
-| `race.js` | UI | Race past you card on workouts, the race page, verdict and race story, gap chart, splits table, and the animated replay on the map. |
+| `awards.js` | UI | Trophy case button, trophies and medals grids, detail sheets, tracking what's been celebrated, the Meet Doppel intro, award celebrations, and the this-week vs Doppel card. |
+| `race.js` | UI | Race Doppel card on workouts, the race page, verdict and race story, gap chart, splits table, and the animated replay on the map. |
 | `leagues.js` | Pure engine | League definitions and weekly minimums, the level curve, `rankOf(xp)`, and `replay()`: walks every week of history applying minimums, detraining, grace and pause weeks, returning the XP timeline, rank-change events and this week's status. |
 | `league-ui.js` | UI | XP and pulse-flame streak icons, the 12 procedurally drawn league badges, the home rank hero, the League page (ladder, this week, next league, XP chart, pause weeks) and the placement, level-up, promotion and drop cards. |
 | `sw.js` | Offline | Caches the app files so the app opens without a connection. Network-first, so updates arrive immediately when online. **Bump `VERSION` whenever files change.** |
@@ -623,5 +623,5 @@ const G = Leagues.replay(L.weeks, {}, new Date(), []);    // XP after minimums/d
 ## Open questions and ideas
 
 - **Monthly challenges.** One self-set target per month with an XP bonus.
-- **Strength and other sports.** XP is run-centric; strength sessions currently earn only through heart rate.
+- **Runs, walks and hikes only.** Doppel imports only Strava's Run, Trail run, Treadmill (virtual) run, Walk and Hike types; rides, strength and other sports are skipped at sync, and any synced by earlier versions are removed on launch.
 - **League seasons.** An optional seasonal reset or "season best" badge, as in ranked game modes.

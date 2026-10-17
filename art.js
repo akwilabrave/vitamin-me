@@ -8,7 +8,7 @@
      · shine     a single soft white highlight, top left
      · emblems   24-unit line icons, 2 px round strokes, drawn in "ink"
      · type      ui-rounded, heavy weight
-   Doppel, the mascot, is past-you: a ghost in a sweatband who has run every
+   Doppel, the mascot, is you from every past run: a ghost in a sweatband who has run every
    run you have ever run, and is always waiting to race you again.
    Loaded before app.js; pure string builders, no app state needed.
    ================================================================ */

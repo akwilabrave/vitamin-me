@@ -104,7 +104,7 @@
   @keyframes fadeout{to{opacity:0}}
   @media (prefers-reduced-motion:reduce){.cel-card,.celebrate,.medalswing svg,.trophyrise .trophy,.cel-grid>div,.peek{animation:none}}
 
-  /* Doppel: wordmark, speech bubble, past-you card */
+  /* Doppel: wordmark, speech bubble, this-week vs Doppel card */
   .wordmark{display:inline-flex;align-items:center;gap:6px}
   .wordmark .mascot{margin:-6px -2px -4px -6px}
   .says{display:flex;align-items:center;gap:10px;text-align:left;max-width:360px;margin:0 auto}
@@ -133,11 +133,8 @@
   .awhero .lbl{color:var(--muted);font-size:13px;margin-top:6px}
   .h2n{font-family:-apple-system,system-ui,sans-serif;font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
 
-  /* trophy shelf: three to a plank */
-  .shelf{border-radius:18px;padding:10px 10px 4px;background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 70%,var(--bg)),var(--panel));border:1px solid var(--line)}
-  .shelfrow{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;align-items:end}
-  .plank{height:12px;margin:0 -4px 12px;border-radius:4px;background:linear-gradient(180deg,#b9875a,#8a5d38);box-shadow:0 6px 10px -6px rgba(0,0,0,.5)}
-  [data-theme="dark"] .plank{background:linear-gradient(180deg,#6d4c33,#4a3222)}
+  /* trophies and medals: plain grids */
+  .trogrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 2px;align-items:start}
   .tro,.med{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;position:relative}
   .tro:focus-visible,.med:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
   .tro .trophy{margin-bottom:-2px}
@@ -148,15 +145,12 @@
   .tbar{display:block;width:56px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin:4px 0 8px}
   .tbar i{display:block;height:100%;background:var(--accent)}
 
-  /* medal wall: medals hang from pegs */
-  .wall{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;padding:14px 8px 8px;border-radius:18px;border:1px solid var(--line);
-    background:radial-gradient(circle at 1px 1px,color-mix(in srgb,var(--muted) 22%,transparent) 1px,transparent 1.5px) 0 0/14px 14px,var(--panel)}
-  @media (max-width:360px){.wall{grid-template-columns:repeat(3,1fr)}}
-  .hook{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.6;margin-bottom:-6px;position:relative;z-index:1}
+  .medgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;align-items:start}
+  @media (max-width:360px){.medgrid{grid-template-columns:repeat(3,1fr)}}
   .med .medal{transform-origin:50% 0}
   .med.on:hover .medal,.med.on:active .medal{animation:swing 1s ease}
   .med:not(.on) .t{color:var(--muted)}
-  .cnt{position:absolute;top:44px;right:calc(50% - 38px);background:var(--text);color:var(--bg);font-family:var(--round);font-weight:800;font-size:11px;border-radius:999px;padding:1px 6px}
+  .cnt{position:absolute;top:42px;right:calc(50% - 38px);background:var(--text);color:var(--bg);font-family:var(--round);font-weight:800;font-size:11px;border-radius:999px;padding:1px 6px}
 
   /* award celebrations */
   .cel-art{position:relative;display:grid;place-items:center;margin:2px auto 4px}
@@ -256,10 +250,6 @@
   .capsule i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 
   .filters{display:grid;gap:10px;margin-bottom:6px}
-  .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px;padding:2px}
-  .chips::-webkit-scrollbar{display:none}
-  .chips button{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}
-  .chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
   .selects{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .selects label{display:grid;gap:2px;min-width:0}
   .selects span{color:var(--muted);font-size:12px}

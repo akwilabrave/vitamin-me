@@ -1,12 +1,12 @@
 "use strict";
 /* ================================================================
-   Doppel — ghost race UI (racing past you)
-   Workout detail gets a "Race past you" card when you've run the same route before.
+   Doppel — race UI (racing Doppel, your past self)
+   Workout detail gets a "Race Doppel" card when you've run the same route before.
    #/ghost/<id>?vs=prev|best shows the verdict, a gap-over-distance chart, km splits,
    and a replay: you and your ghost moving along today's route at 1 s ≈ 1.5 min.
    Loaded before app.js; uses its globals at call time.
    ================================================================ */
-const GHOST_SVG = mascotSvg('run', 40, { animate: false, label: 'Past you' });
+const GHOST_SVG = mascotSvg('run', 40, { animate: false, label: 'Doppel' });
 const ghostFace = mood => mascotSvg(mood, 52, { label: 'Doppel' });
 const signed = s => `${s >= 0 ? '+' : '−'}${dur(Math.abs(s))}`;
 
@@ -16,7 +16,7 @@ function ghostCardHtml(a){
   const n = g.matches.length;
   const verdict = Math.abs(diff) < 1 ? `Same pace as ${shortDate(g.prev.date)}`
     : diff > 0 ? `${dur(diff)} /km faster than ${shortDate(g.prev.date)}` : `${dur(-diff)} /km slower than ${shortDate(g.prev.date)}`;
-  return `<h2>Race past you</h2><a class="ghostcard" href="#/ghost/${a.id}">
+  return `<h2>Race Doppel</h2><a class="ghostcard" href="#/ghost/${a.id}">
       <span class="gicon">${ghostFace(diff > 0 ? 'sad' : 'smug')}</span>
       <span><span class="t">${verdict}</span>
       <span class="m">You've run this route ${n} time${n > 1 ? 's' : ''} before${g.best.id !== g.prev.id ? `. Your best here was ${shortDate(g.best.date)}` : ''}.</span></span>${chevron}</a>`;
@@ -32,26 +32,26 @@ async function viewGhost(arg){
   const back = backTo(`#/a/${id}`, 'Workout');
   if (!a || !g){ $('view').innerHTML = `${back}<div class="empty">No earlier run on this route to race.</div>`; return; }
   const ghostRef = g[vs], ga = acts[ghostRef.id];
-  $('view').innerHTML = `${back}<h1 class="brand">Race past you</h1><div class="status">Loading both runs from Strava…</div>`;
+  $('view').innerHTML = `${back}<h1 class="brand">Race Doppel</h1><div class="status">Loading both runs from Strava…</div>`;
 
   let you, gh;
   try { [you, gh] = await Promise.all([raceStream(id), raceStream(ghostRef.id)]); }
-  catch(e){ $('view').innerHTML = `${back}<h1 class="brand">Race past you</h1><div class="empty">${esc(e.message)}</div>`; return; }
+  catch(e){ $('view').innerHTML = `${back}<h1 class="brand">Race Doppel</h1><div class="empty">${esc(e.message)}</div>`; return; }
   if (location.hash !== '#/ghost/' + arg) return;
-  if (!you.d.length || !gh.d.length){ $('view').innerHTML = `${back}<h1 class="brand">Race past you</h1><div class="empty">Strava has no distance data for one of these runs.</div>`; return; }
+  if (!you.d.length || !gh.d.length){ $('view').innerHTML = `${back}<h1 class="brand">Race Doppel</h1><div class="empty">Strava has no distance data for one of these runs.</div>`; return; }
 
   const C = Ghost.compare(you, gh);
   const win = C.final >= 0, km = (C.end / 1000);
-  const verdict = Math.abs(C.final) < 1 ? 'Dead heat with past you' : win ? `You beat past you by ${dur(C.final)}` : `Past you won by ${dur(-C.final)}`;
+  const verdict = Math.abs(C.final) < 1 ? 'Dead heat with Doppel' : win ? `You beat Doppel by ${dur(C.final)}` : `Doppel won by ${dur(-C.final)}`;
   const story = [];
   if (C.maxBehind < -5 && win) story.push(`You were ${dur(-C.maxBehind)} behind at worst and came back.`);
   if (C.maxLead > 5 && !win) story.push(`You led by up to ${dur(C.maxLead)} but faded.`);
   if (win && C.maxLead - C.final > 5) story.push(`Your biggest lead was ${dur(C.maxLead)}.`);
   if (C.decidedAt) story.push(`The lead changed for the last time at ${nf(C.decidedAt / 1000, 1)} km.`);
 
-  $('view').innerHTML = `${back}<h1 class="brand">Race past you</h1>
+  $('view').innerHTML = `${back}<h1 class="brand">Race Doppel</h1>
     <div class="status">${esc(a.name)}, ${shortDate(a.start)}, against ${vs === 'best' ? 'your best here' : 'last time'} (${shortDate(ga.start)})</div>
-    ${g.best.id !== g.prev.id ? `<div class="seg" role="group" aria-label="Which past you">
+    ${g.best.id !== g.prev.id ? `<div class="seg" role="group" aria-label="Which Doppel">
       <button data-vs="prev" aria-pressed="${vs === 'prev'}">Last time</button><button data-vs="best" aria-pressed="${vs === 'best'}">Your best here</button></div>` : ''}
     <div class="verdict ${win ? 'win' : 'lose'}"><span class="gicon">${ghostFace(win ? 'sad' : 'smug')}</span><div><div class="vt">${verdict}</div>
       <div class="m">${C.end >= 0.97 * you.d[you.d.length - 1] ? `Over the full ${nf(km, 2)} km.` : `Over the first ${nf(km, 2)} km, the distance you both covered.`}${story.length ? ' ' + story.join(' ') : ''}</div></div></div>
@@ -60,11 +60,11 @@ async function viewGhost(arg){
       <div class="racelive" id="raceLive" aria-live="off"></div></div>
     <h2>Gap over the run</h2>${gapChart(C)}
     <h2>Kilometre by kilometre</h2>
-    <table><thead><tr><th>Km</th><th>You</th><th>Past you</th><th>Split</th><th>Gap</th></tr></thead><tbody>
+    <table><thead><tr><th>Km</th><th>You</th><th>Doppel</th><th>Split</th><th>Gap</th></tr></thead><tbody>
       ${C.splits.map(s => `<tr><td>${s.km}</td><td>${dur(s.you)}</td><td>${dur(s.ghost)}</td>
         <td class="${s.diff >= 0 ? 'ahead' : 'behind'}">${signed(s.diff)}</td><td class="${s.gap >= 0 ? 'ahead' : 'behind'}">${signed(s.gap)}</td></tr>`).join('')}
     </tbody></table>
-    <p class="hint">Split: how much faster (+) or slower (−) that kilometre was than past you's. Gap: your total lead (+) or deficit (−) at that point. Uses elapsed time, so stops count, as in a real race.</p>${poweredByStrava()}`;
+    <p class="hint">Split: how much faster (+) or slower (−) that kilometre was than Doppel's. Gap: your total lead (+) or deficit (−) at that point. Uses elapsed time, so stops count, as in a real race.</p>${poweredByStrava()}`;
 
   document.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { location.hash = `#/ghost/${id}?vs=${b.dataset.vs}`; });
   drawRace(you, gh);
@@ -111,7 +111,7 @@ function drawRace(you, gh){
     const dy = Ghost.distAt(you.t, you.d, T), dg = Math.min(Ghost.distAt(gh.t, gh.d, T), you.d[you.d.length - 1]);
     youM.setLatLng(posAt(dy)); ghostM.setLatLng(posAt(dg));
     const gap = dy - dg;
-    live.innerHTML = `<span class="num">${dur(T)}</span><span>You ${nf(dy / 1000, 2)} km</span><span>Past you ${nf(dg / 1000, 2)} km</span>
+    live.innerHTML = `<span class="num">${dur(T)}</span><span>You ${nf(dy / 1000, 2)} km</span><span>Doppel ${nf(dg / 1000, 2)} km</span>
       <b class="${gap >= 0 ? 'ahead' : 'behind'}">${Math.abs(gap) < 5 ? 'Level' : `${nf(Math.abs(gap))} m ${gap > 0 ? 'ahead' : 'behind'}`}</b>`;
   };
   show(0);

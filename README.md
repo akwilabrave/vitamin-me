@@ -382,7 +382,7 @@ Everything drawn in Doppel (the mascot, medals, trophies, league badges and icon
 Doppel follows Strava's [brand guidelines](https://developers.strava.com/guidelines/):
 
 - **Powered by Strava:** every screen that shows Strava data (workouts, a workout, race, progress, territory, league, the Strava settings page) and the landing page end with the official logo: `strava-powered-white.png` in dark mode and `strava-powered-black.png` in light mode, small at the bottom.
-- **Connect with Strava:** the sign-in button is Strava's official button (`app/btn-strava-connect.svg`, 48 px tall), linking to Strava's OAuth page.
+- **Connect with Strava:** the sign-in button is Strava's official button (`app/btn-strava-connect.png`, 48 px tall, orange), linking to Strava's OAuth page.
 - **View on Strava:** every workout links back to the original activity, in bold Strava orange (`#FC5200`).
 - The name "Strava" is never part of Doppel's name or icon, and the landing page says Doppel is independent.
 

@@ -414,7 +414,7 @@ function routeSvg(poly, size = 52){
 /* Strava attribution: required on every screen that shows Strava data. White logo on dark, black on light. */
 /* The official "Connect with Strava" button (brand guidelines: 48 px tall, links to Strava's OAuth). */
 const connectButton = () => `<button class="stravabtn" onclick="connectStrava()" aria-label="Connect with Strava">
-  <img src="btn-strava-connect.svg" alt="Connect with Strava" height="48" onerror="this.outerHTML='Connect with Strava'"></button>`;
+  <img src="btn-strava-connect.png" alt="Connect with Strava" width="237" height="48" onerror="this.outerHTML='Connect with Strava'"></button>`;
 const poweredByStrava = () => `<div class="pbs"><img class="pbs-w" src="strava-powered-white.png" alt="Powered by Strava" width="176" height="60">
   <img class="pbs-b" src="strava-powered-black.png" alt="Powered by Strava" width="176" height="60"></div>`;
 
